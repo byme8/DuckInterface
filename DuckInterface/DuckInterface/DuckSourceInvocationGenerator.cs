@@ -69,7 +69,7 @@ namespace DuckInterface
                     var source = $@"
 using System;
 
-namespace {(duckableParamenter.DuckInteface.ContainingNamespace.Name)} 
+namespace {(duckableParamenter.DuckInteface.ContainingNamespace.ToDisplayString())} 
 {{
     public partial struct {duckableParamenter.DuckInteface.Name}
     {{

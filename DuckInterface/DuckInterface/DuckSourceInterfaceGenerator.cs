@@ -76,7 +76,7 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
     }}
 }}
 ";
-                context.AddSource(uniqueName, SourceText.From(source, Encoding.UTF8));
+                context.AddSource(uniqueName, source.ToSourceText());
             }
         }
 
