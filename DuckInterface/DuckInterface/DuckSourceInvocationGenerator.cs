@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -16,83 +17,121 @@ namespace DuckInterface
             }
 
             var duckAttribute = context.Compilation.GetTypeByMetadataName("DuckAttribute");
-            var callsWithDuckInterface = receiver.Invocations
+            var callsArgumentsWithDuckInterface = receiver.Invocations
+                .SelectMany(invocation =>
+                {
+                    var semanticModel = context.Compilation.GetSemanticModel(invocation.SyntaxTree);
+                    var symbol =
+                        semanticModel.GetSpeculativeSymbolInfo(invocation.SpanStart, invocation,
+                            SpeculativeBindingOption.BindAsExpression);
+
+                    var call = symbol.CandidateSymbols.FirstOrDefault() as IMethodSymbol;
+                    if (call is null)
+                    {
+                        return new (ITypeSymbol, ITypeSymbol)[0];
+                    }
+
+                    return call
+                        .Parameters
+                        .Select((o, i) => (
+                            Index: i,
+                            DuckInteface: o.Type,
+                            IsDuckInteface: o.Type
+                                .GetAttributes()
+                                .Any(attr => attr.AttributeClass.Equals(duckAttribute))))
+                        .Where(o => o.IsDuckInteface)
+                        .Select(o =>
+                        {
+                            var argumentSyntax = invocation
+                                    .ArgumentList
+                                    .Arguments[o.Index]
+                                    .Expression switch
+                                {
+                                    IdentifierNameSyntax name => name,
+                                    ObjectCreationExpressionSyntax ctor => ctor.Type,
+                                    _ => null
+                                };
+
+                            if (argumentSyntax is null)
+                            {
+                                return (null, null);
+                            }
+
+                            var speculativeArgumentSymbol = semanticModel
+                                .GetSpeculativeSymbolInfo(argumentSyntax.SpanStart, argumentSyntax,
+                                    SpeculativeBindingOption.BindAsExpression);
+
+                            var duckableSymbol = speculativeArgumentSymbol.GetTypeSymbol();
+
+                            return (o.DuckInteface, TypeToDuck: duckableSymbol);
+                        });
+                })
+                .ToArray();
+
+            var variableDeclarationsWithDuckInterface = receiver.VariableDeclarations
                 .Select(o =>
                 {
                     var semanticModel = context.Compilation.GetSemanticModel(o.SyntaxTree);
-                    var symbol =
-                        semanticModel.GetSpeculativeSymbolInfo(o.SpanStart, o,
+                    var duckInterfaceSymbol =
+                        semanticModel.GetSpeculativeSymbolInfo(o.Type.SpanStart, o.Type,
                             SpeculativeBindingOption.BindAsExpression);
 
-                    return (Symbol: symbol.CandidateSymbols.FirstOrDefault() as IMethodSymbol, SyntaxNode: o);
-                })
-                .Where(o => o.Symbol != null)
-                .Where(o => o.Symbol.Parameters
-                    .Any(parameter => parameter.Type.GetAttributes()
-                        .Any(attribute => attribute.AttributeClass.Equals(duckAttribute))));
-
-            foreach (var call in callsWithDuckInterface)
-            {
-                var duckableParamenters = call.Symbol.Parameters
-                    .Select((o, i) => (
-                        Index: i,
-                        DuckInteface: o.Type,
-                        IsDuckInteface: o.Type
+                    if (duckInterfaceSymbol.Symbol == null ||
+                        !duckInterfaceSymbol.Symbol
                             .GetAttributes()
-                            .Any(attr => attr.AttributeClass.Equals(duckAttribute))))
-                    .Where(o => o.IsDuckInteface);
-
-                foreach (var duckableParamenter in duckableParamenters)
-                {
-                    var argument = call
-                        .SyntaxNode
-                        .ArgumentList
-                        .Arguments[duckableParamenter.Index]
-                        .Expression;
-                    
-                    var semanticModel = context.Compilation.GetSemanticModel(argument.SyntaxTree);
-                    var duckableSymbol = semanticModel
-                        .GetSpeculativeSymbolInfo(argument.SpanStart, argument,
-                            SpeculativeBindingOption.BindAsExpression).Symbol as ILocalSymbol;
-
-                    var canBeDuck = duckableParamenter.DuckInteface
-                        .IsTypeDuckableTo(duckableSymbol.Type);
-
-                    if (!canBeDuck)
+                            .Any(attribute => attribute.AttributeClass.Equals(duckAttribute)))
                     {
-                        continue;
+                        return (null, null);
                     }
 
-                    var uniqueName = duckableSymbol.Type
-                        .GetUniqueName();
-                    
-                    var source = $@"
+                    var value = o.DescendantNodes().OfType<EqualsValueClauseSyntax>().First().Value;
+                    var typeToDuckSymbol =
+                        semanticModel.GetSpeculativeSymbolInfo(value.SpanStart, value,
+                            SpeculativeBindingOption.BindAsExpression);
+
+                    return (DuckInteface: duckInterfaceSymbol.GetTypeSymbol(), TypeToDuck: typeToDuckSymbol.GetTypeSymbol());
+                })
+                .ToArray();
+
+            var ducks = callsArgumentsWithDuckInterface
+                .Concat(variableDeclarationsWithDuckInterface)
+                .Distinct()
+                .Where(o => 
+                    o.DuckInteface != null && 
+                    o.TypeToDuck != null && 
+                    o.DuckInteface.IsTypeDuckableTo(o.TypeToDuck))
+                .ToArray();
+
+            foreach (var (duckInterface, typeToDuck) in ducks)
+            {
+                var uniqueName = duckInterface
+                    .GetUniqueName();
+
+                var source = $@"
 using System;
 
-namespace {(duckableParamenter.DuckInteface.ContainingNamespace.ToDisplayString())} 
+namespace {(duckInterface.ContainingNamespace.ToDisplayString())} 
 {{
-    public partial {(duckableParamenter.DuckInteface.TypeKind == TypeKind.Struct ? "struct" : "class")} {duckableParamenter.DuckInteface.Name}
+    public partial {(duckInterface.TypeKind == TypeKind.Struct ? "struct" : "class")} {duckInterface.Name}
     {{
-        private {duckableParamenter.DuckInteface.Name}({duckableSymbol.Type.ToGlobalName()} value) 
+        private {duckInterface.Name}({duckInterface.ToGlobalName()} value) 
         {{
-{duckableParamenter
-                        .DuckInteface
-                        .GetMembers()
-                        .OfType<IMethodSymbol>()
-                        .Where(o => o.Name != ".ctor")
-                        .Select(o => $"             _{o.Name} = value.{o.Name};")
-                        .JoinWithNewLine()}
+{duckInterface
+                    .GetMembers()
+                    .OfType<IMethodSymbol>()
+                    .Where(o => o.Name != ".ctor")
+                    .Select(o => $"             _{o.Name} = value.{o.Name};")
+                    .JoinWithNewLine()}
         }}
 
-        public static implicit operator {duckableParamenter.DuckInteface.Name}({duckableSymbol.Type.ToGlobalName()} value)
+        public static implicit operator {duckInterface.Name}({typeToDuck.ToGlobalName()} value)
         {{
-            return new {duckableParamenter.DuckInteface.Name}(value);
+            return new {duckInterface.Name}(value);
         }}
     }}
 }}
 ";
-                    context.AddSource(uniqueName, source.ToSourceText());
-                }
+                context.AddSource(uniqueName, source.ToSourceText());
             }
         }
 
@@ -102,17 +141,24 @@ namespace {(duckableParamenter.DuckInteface.ContainingNamespace.ToDisplayString(
         }
     }
 
-
     public class DuckSyntaxInvocationReceiver : ISyntaxReceiver
     {
         public List<InvocationExpressionSyntax> Invocations { get; }
             = new List<InvocationExpressionSyntax>();
 
+        public List<VariableDeclarationSyntax> VariableDeclarations { get; }
+            = new List<VariableDeclarationSyntax>();
+
         public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
         {
-            if (syntaxNode is InvocationExpressionSyntax invocationExpressionSyntax)
+            switch (syntaxNode)
             {
-                Invocations.Add(invocationExpressionSyntax);
+                case InvocationExpressionSyntax invocation:
+                    Invocations.Add(invocation);
+                    break;
+                case VariableDeclarationSyntax variableDeclarationSyntax:
+                    VariableDeclarations.Add(variableDeclarationSyntax);
+                    break;
             }
         }
     }

@@ -41,8 +41,8 @@ using System;
 
 namespace TestProject 
 {
-    [Duck]
-    public partial struct ICalculator
+     [Duck]
+    public partial class DCalculator
     {
         public partial float Calculate(float a, float b);
     }
@@ -55,18 +55,30 @@ namespace TestProject
         }
     }
 
-    public static class Program 
+    public class Container
     {
-        public static void Main(string[] args)
+        public DCalculator Calculator { get; set; }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
         {
             var calculator = new AddCalculator();
-            Doit(calculator);
+            Doit(calculator); // Main
         }
 
-        public static void Doit(ICalculator calculator)
+        public static float Doit(DCalculator calculator)
         {
-            var result = calculator.Calculate(1, 2);
+            return calculator.Calculate(10, calculator.Calculate(10, 20));
         }
+
+        public static float Doit2(AddCalculator calculator)
+        {
+            return Doit(calculator);
+        }
+
+        // additional
     }   
 }
 ";

@@ -4,12 +4,24 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace DuckInterface
 {
     public static class Units
     {
+        public static ITypeSymbol? GetTypeSymbol(this SymbolInfo info)
+        {
+            return info.Symbol switch
+            {
+                ITypeSymbol type => type,
+                ILocalSymbol local => local.Type,
+                IParameterSymbol parameterSymbol => parameterSymbol.Type,
+                _ => null
+            };
+        }
+        
         public static bool IsTypeDuckableTo(this ITypeSymbol @interface, ITypeSymbol implementation)
         {
             var methodsToDuck = @interface
@@ -37,7 +49,6 @@ namespace DuckInterface
 
             var canBeDuck = methodsToDuck
                 .All(o => memberThatCanBeDucked.Contains(o));
-
 
             return canBeDuck;
         }
