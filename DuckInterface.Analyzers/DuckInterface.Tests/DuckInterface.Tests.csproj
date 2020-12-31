@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DuckInterface.CodeFixes\DuckInterface.CodeFixes.csproj" />
-    <ProjectReference Include="..\DuckInterface\DuckInterface.csproj" />
+    <ProjectReference Include="..\DuckInterface.Analyzers\DuckInterface.Analyzers.csproj" />
   </ItemGroup>
 
 </Project>

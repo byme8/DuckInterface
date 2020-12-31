@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace DuckInterface
+namespace DuckInterface.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class DuckInterfaceAnalyzer : DiagnosticAnalyzer

@@ -3,22 +3,20 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuckInterface", "DuckInterface\DuckInterface\DuckInterface.csproj", "{1A355DE9-308B-44C3-8FE7-EA4868948228}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface.Analyzers", "DuckInterface.Analyzers\DuckInterface.Analyzers\DuckInterface.Analyzers.csproj", "{1A355DE9-308B-44C3-8FE7-EA4868948228}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuckInterface.CodeFixes", "DuckInterface\DuckInterface.CodeFixes\DuckInterface.CodeFixes.csproj", "{37FFE669-DC11-48DF-9642-71CE149FE01B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface.CodeFixes", "DuckInterface.Analyzers\DuckInterface.CodeFixes\DuckInterface.CodeFixes.csproj", "{37FFE669-DC11-48DF-9642-71CE149FE01B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuckInterface.Package", "DuckInterface\DuckInterface.Package\DuckInterface.Package.csproj", "{624EBBF6-2C6E-4AD1-9EC0-1D0204CB7DC6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface.Tests", "DuckInterface.Analyzers\DuckInterface.Tests\DuckInterface.Tests.csproj", "{E05990D8-4D63-4270-BF08-35FA3EFEBA97}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuckInterface.Tests", "DuckInterface\DuckInterface.Tests\DuckInterface.Tests.csproj", "{E05990D8-4D63-4270-BF08-35FA3EFEBA97}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuckInterface.Vsix", "DuckInterface\DuckInterface.Vsix\DuckInterface.Vsix.csproj", "{032D2D1F-03F6-4065-AAD4-3047A5ACFC5B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface.Vsix", "DuckInterface.Analyzers\DuckInterface.Vsix\DuckInterface.Vsix.csproj", "{032D2D1F-03F6-4065-AAD4-3047A5ACFC5B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{F52B3E38-B86F-4F2E-A0E7-34E12D4CF7EE}"
-ProjectSection(SolutionItems) = preProject
-	.gitignore = .gitignore
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuckInterface.Core", "DuckInterface.Core\DuckInterface.Core.csproj", "{F141A5FF-677C-4AB8-9CC2-FEC566620A10}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface.Core", "DuckInterface.Core\DuckInterface.Core.csproj", "{F141A5FF-677C-4AB8-9CC2-FEC566620A10}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,10 +32,6 @@ Global
 		{37FFE669-DC11-48DF-9642-71CE149FE01B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37FFE669-DC11-48DF-9642-71CE149FE01B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{37FFE669-DC11-48DF-9642-71CE149FE01B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{624EBBF6-2C6E-4AD1-9EC0-1D0204CB7DC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{624EBBF6-2C6E-4AD1-9EC0-1D0204CB7DC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{624EBBF6-2C6E-4AD1-9EC0-1D0204CB7DC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{624EBBF6-2C6E-4AD1-9EC0-1D0204CB7DC6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E05990D8-4D63-4270-BF08-35FA3EFEBA97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E05990D8-4D63-4270-BF08-35FA3EFEBA97}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E05990D8-4D63-4270-BF08-35FA3EFEBA97}.Release|Any CPU.ActiveCfg = Release|Any CPU
