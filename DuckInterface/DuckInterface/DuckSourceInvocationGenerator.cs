@@ -15,6 +15,7 @@ namespace DuckInterface
                 return;
             }
 
+            var duckAttribute = context.Compilation.GetTypeByMetadataName("DuckAttribute");
             var callsWithDuckInterface = receiver.Invocations
                 .Select(o =>
                 {
@@ -28,7 +29,7 @@ namespace DuckInterface
                 .Where(o => o.Symbol != null)
                 .Where(o => o.Symbol.Parameters
                     .Any(parameter => parameter.Type.GetAttributes()
-                        .Any(attribute => attribute.AttributeClass.Name.EndsWith("DuckAttribute"))));
+                        .Any(attribute => attribute.AttributeClass.Equals(duckAttribute))));
 
             foreach (var call in callsWithDuckInterface)
             {
@@ -38,7 +39,7 @@ namespace DuckInterface
                         DuckInteface: o.Type,
                         IsDuckInteface: o.Type
                             .GetAttributes()
-                            .Any(attr => attr.AttributeClass.Name.EndsWith("DuckAttribute"))))
+                            .Any(attr => attr.AttributeClass.Equals(duckAttribute))))
                     .Where(o => o.IsDuckInteface);
 
                 foreach (var duckableParamenter in duckableParamenters)

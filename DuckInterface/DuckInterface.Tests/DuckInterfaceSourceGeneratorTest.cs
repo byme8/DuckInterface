@@ -39,8 +39,28 @@ namespace DuckInterface.Test
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
                 .ToArray();
             
-            Assert.IsTrue(diagnostics
-                .Any(o => o.GetMessage() == "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.ICalculator'"));
+            Assert.IsTrue(
+                diagnostics.Any(o => o.GetMessage() == "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.ICalculator'"), 
+                "Type with different public interface should be ignored.");
+        }
+        
+        [TestMethod]
+        public async Task DeepNamespacesWorks()
+        {
+            var project = await TestProject.Project.ReplacePartOfDocumentAsync(
+                "Program.cs", 
+                "namespace TestProject", 
+                "namespace TestProject.SomeNamespace.Test");
+
+            var newProject = await project.ApplyDuckGenerators();
+            
+            var compilation = await newProject.GetCompilationAsync();
+            var diagnostics = compilation
+                .GetDiagnostics()
+                .Where(o => o.Severity == DiagnosticSeverity.Error)
+                .ToArray();
+            
+            Assert.IsFalse(diagnostics.Any(), "Long namespaces doesn't work.");
         }
     }
 }

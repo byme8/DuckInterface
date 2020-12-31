@@ -21,4 +21,8 @@
     <EmbeddedResource Update="Resources.resx" Generator="ResXFileCodeGenerator" LastGenOutput="Resources.Designer.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\DuckInterface.Core\DuckInterface.Core.csproj" />
+  </ItemGroup>
+
 </Project>

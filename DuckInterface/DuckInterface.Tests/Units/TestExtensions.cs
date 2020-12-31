@@ -23,8 +23,7 @@ namespace DuckInterface.Test.Units
         
         public static async Task<Project> ApplyDuckGenerators(this Project project)
         {
-            var newProject = await project.RunSourceGenerator(new DuckSourceBaseGenerator(), null);
-            newProject = await newProject.RunSourceGenerator(new DuckSourceInterfaceGenerator(), new DuckSyntaxInterfaceReceiver());
+            var newProject = await project.RunSourceGenerator(new DuckSourceInterfaceGenerator(), new DuckSyntaxInterfaceReceiver());
             newProject = await newProject.RunSourceGenerator(new DuckSourceInvocationGenerator(), new DuckSyntaxInvocationReceiver());
 
             return newProject;

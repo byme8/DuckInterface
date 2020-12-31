@@ -32,6 +32,7 @@ namespace DuckInterface.Test.Data
                 MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Attribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ArrayPool<>).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(DuckAttribute).Assembly.Location),
             };
         }
         
@@ -40,19 +41,18 @@ using System;
 
 namespace TestProject 
 {
-  
+    [Duck]
+    public partial struct ICalculator
+    {
+        public partial float Calculate(float a, float b);
+    }
+
     public class AddCalculator
     {
         public float Calculate(float a, float b)
         {
             return a + b;
         }
-    }
-
-    [Duck]
-    public partial struct ICalculator
-    {
-        public partial float Calculate(float a, float b);
     }
 
     public static class Program 
