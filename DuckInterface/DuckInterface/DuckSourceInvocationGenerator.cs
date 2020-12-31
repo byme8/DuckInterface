@@ -71,7 +71,7 @@ using System;
 
 namespace {(duckableParamenter.DuckInteface.ContainingNamespace.ToDisplayString())} 
 {{
-    public partial struct {duckableParamenter.DuckInteface.Name}
+    public partial {(duckableParamenter.DuckInteface.TypeKind == TypeKind.Struct ? "struct" : "class")} {duckableParamenter.DuckInteface.Name}
     {{
         private {duckableParamenter.DuckInteface.Name}({duckableSymbol.Type.ToGlobalName()} value) 
         {{

@@ -1,3 +1,4 @@
-﻿
+﻿using System;
 
-public class DuckAttribute : System.Attribute { }
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
+public class DuckAttribute : Attribute { }

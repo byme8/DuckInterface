@@ -69,7 +69,7 @@ using System;
 
 namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name} 
 {{
-    public partial struct {duckedType.Identifier.Text}
+    public partial {duckedType.Keyword.Text} {duckedType.Identifier.Text}
     {{
         {fields.JoinWithNewLine()}        
         {fullMethods.JoinWithNewLine()}        
@@ -89,12 +89,12 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
 
     public class DuckSyntaxInterfaceReceiver : ISyntaxReceiver
     {
-        public List<StructDeclarationSyntax> DuckStructs { get; }
-            = new List<StructDeclarationSyntax>();
+        public List<TypeDeclarationSyntax> DuckStructs { get; }
+            = new List<TypeDeclarationSyntax>();
 
         public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
         {
-            if (syntaxNode is StructDeclarationSyntax structDeclarationSyntax &&
+            if (syntaxNode is TypeDeclarationSyntax structDeclarationSyntax &&
                 structDeclarationSyntax.AttributeLists
                     .SelectMany(o => o
                         .DescendantNodes()
