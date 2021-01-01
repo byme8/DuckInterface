@@ -18,9 +18,9 @@ namespace DuckInterface
                 return;
             }
 
-            var duckedTypes = receiver.DuckStructs;
+            var duckableTypes = receiver.DuckableTypes;
 
-            foreach (var duckedType in duckedTypes)
+            foreach (var duckedType in duckableTypes)
             {
                 var uniqueName = $"{duckedType.Identifier.Text}_{Guid.NewGuid().ToString().Replace("-", "")}";
                 var fields = duckedType
@@ -56,7 +56,7 @@ namespace DuckInterface
                         
                         return
 $@"
-    {method.Modifiers.Select(o => o.Text).Join(" ")} {returnType} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
+    public {method.Modifiers.Select(o => o.Text).Join(" ")} {returnType} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
     {{
         return _{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
     }}
@@ -69,7 +69,7 @@ using System;
 
 namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name} 
 {{
-    public partial {duckedType.Keyword.Text} {duckedType.Identifier.Text}
+    public partial class D{duckedType.Identifier.Text}
     {{
         {fields.JoinWithNewLine()}        
         {fullMethods.JoinWithNewLine()}        
@@ -89,7 +89,7 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
 
     public class DuckSyntaxInterfaceReceiver : ISyntaxReceiver
     {
-        public List<TypeDeclarationSyntax> DuckStructs { get; }
+        public List<TypeDeclarationSyntax> DuckableTypes { get; }
             = new List<TypeDeclarationSyntax>();
 
         public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
@@ -99,9 +99,9 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
                     .SelectMany(o => o
                         .DescendantNodes()
                         .OfType<IdentifierNameSyntax>())
-                    .Any(o => o.Identifier.Text.EndsWith("Duck")))
+                    .Any(o => o.Identifier.Text.EndsWith("Duckable")))
             {
-                DuckStructs.Add(structDeclarationSyntax);
+                DuckableTypes.Add(structDeclarationSyntax);
             }
         }
     }

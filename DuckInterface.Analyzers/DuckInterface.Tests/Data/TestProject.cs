@@ -41,10 +41,10 @@ using System;
 
 namespace TestProject 
 {
-     [Duck]
-    public partial class DCalculator
+    [Duckable]
+    public interface ICalculator
     {
-        public partial float Calculate(float a, float b);
+        float Calculate(float a, float b);
     }
 
     public class AddCalculator
@@ -57,7 +57,7 @@ namespace TestProject
 
     public class Container
     {
-        public DCalculator Calculator { get; set; }
+        public DICalculator Calculator { get; set; }
     }
 
     class Program
@@ -68,7 +68,7 @@ namespace TestProject
             Doit(calculator); // Main
         }
 
-        public static float Doit(DCalculator calculator)
+        public static float Doit(DICalculator calculator)
         {
             return calculator.Calculate(10, calculator.Calculate(10, 20));
         }

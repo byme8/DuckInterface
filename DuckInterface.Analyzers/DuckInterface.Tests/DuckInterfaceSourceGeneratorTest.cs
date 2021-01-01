@@ -18,9 +18,11 @@ namespace DuckInterface.Test
             var newProject = await project.ApplyDuckGenerators();
             
             var compilation = await newProject.GetCompilationAsync();
-            var error = compilation.GetDiagnostics().Any(o => o.Severity == DiagnosticSeverity.Error);
+            var errors = compilation.GetDiagnostics()
+                .Where(o => o.Severity == DiagnosticSeverity.Error)
+                .ToArray();
             
-            Assert.IsFalse(error);
+            Assert.IsFalse(errors.Any(), errors.Select(o => o.GetMessage()).JoinWithNewLine());
         }
         
         [TestMethod]

@@ -17,6 +17,7 @@ namespace DuckInterface
             }
 
             var duckAttribute = context.Compilation.GetTypeByMetadataName("DuckAttribute");
+            var duckableAttribute = context.Compilation.GetTypeByMetadataName("DuckableAttribute");
             var callsArgumentsWithDuckInterface = receiver.Invocations
                 .SelectMany(invocation =>
                 {
@@ -33,13 +34,11 @@ namespace DuckInterface
 
                     return call
                         .Parameters
-                        .Select((o, i) => (
-                            Index: i,
-                            DuckInteface: o.Type,
-                            IsDuckInteface: o.Type
-                                .GetAttributes()
-                                .Any(attr => attr.AttributeClass.Equals(duckAttribute))))
-                        .Where(o => o.IsDuckInteface)
+                        .Select((o, i) => (Index: i, DuckInteface: context.Compilation
+                                .GetSymbolsWithName(s => s.EndsWith(o.Type.Name.Substring(1)), SymbolFilter.Type, context.CancellationToken)
+                                .OfType<ITypeSymbol>()
+                                .FirstOrDefault(s => s.GetAttributes().Any(attr => attr.AttributeClass.Equals(duckableAttribute)))))
+                        .Where(o => o.DuckInteface != null)
                         .Select(o =>
                         {
                             TypeSyntax argumentSyntax = null;
@@ -115,9 +114,9 @@ using System;
 
 namespace {(duckInterface.ContainingNamespace.ToDisplayString())} 
 {{
-    public partial {(duckInterface.TypeKind == TypeKind.Struct ? "struct" : "class")} {duckInterface.Name}
+    public partial class D{duckInterface.Name}
     {{
-        private {duckInterface.Name}({duckInterface.ToGlobalName()} value) 
+        private D{duckInterface.Name}({typeToDuck.ToGlobalName()} value) 
         {{
 {duckInterface
                     .GetMembers()
@@ -127,9 +126,9 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                     .JoinWithNewLine()}
         }}
 
-        public static implicit operator {duckInterface.Name}({typeToDuck.ToGlobalName()} value)
+        public static implicit operator D{duckInterface.Name}({typeToDuck.ToGlobalName()} value)
         {{
-            return new {duckInterface.Name}(value);
+            return new D{duckInterface.Name}(value);
         }}
     }}
 }}
