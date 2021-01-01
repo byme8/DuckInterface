@@ -34,8 +34,7 @@ namespace DuckInterface
                             .Select(oo => oo.Keyword.Text)
                             .ToArray();
 
-                        return
-                            $"private readonly Func<{types.Skip(1).Concat(types.Take(1)).Join()}> _{method.Identifier.Text};";
+                        return $"        private readonly Func<{types.Skip(1).Concat(types.Take(1)).Join()}> _{method.Identifier.Text};";
                     });
                 
                 var fullMethods = duckedType
@@ -56,10 +55,10 @@ namespace DuckInterface
                         
                         return
 $@"
-    public {method.Modifiers.Select(o => o.Text).Join(" ")} {returnType} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
-    {{
-        return _{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
-    }}
+        public {returnType} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
+        {{
+            return _{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
+        }}
 ";
                     });
                 
@@ -71,8 +70,8 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
 {{
     public partial class D{duckedType.Identifier.Text}
     {{
-        {fields.JoinWithNewLine()}        
-        {fullMethods.JoinWithNewLine()}        
+{fields.JoinWithNewLine()}        
+{fullMethods.JoinWithNewLine()}        
     }}
 }}
 ";
