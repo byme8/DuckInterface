@@ -24,8 +24,6 @@ namespace DuckInterface
                 default:
                     return null;
             }
-
-            ;
         }
 
         public static (bool IsDuckable, IEnumerable<ISymbol> MissingSymbols) IsTypeDuckableTo(

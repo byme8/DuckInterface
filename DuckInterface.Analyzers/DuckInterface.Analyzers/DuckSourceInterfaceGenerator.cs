@@ -12,6 +12,16 @@ namespace DuckInterface
     [Generator]
     public class DuckSourceInterfaceGenerator : ISourceGenerator
     {
+        private static readonly DiagnosticDescriptor DuckCantHandleRefStructs =
+            new DiagnosticDescriptor(
+                nameof(DuckCantHandleRefStructs),
+                "DuckInterface can't handle the ref structs",
+                "DuckInterface can't handle ref structs",
+                "Duck Typing",
+                DiagnosticSeverity.Error,
+                isEnabledByDefault: true,
+                description: "Duck mapping is not possible.");
+
         public void Execute(GeneratorExecutionContext context)
         {
             if (!(context.SyntaxReceiver is DuckSyntaxInterfaceReceiver receiver))
@@ -38,17 +48,37 @@ namespace DuckInterface
                                 SpeculativeBindingOption.BindAsTypeOrNamespace)
                             .GetTypeSymbol();
 
-                        var parameters = method
-                            .DescendantNodes()
-                            .OfType<ParameterSyntax>()
+                        if (returnType.IsRefLikeType)
+                        {
+                            context.ReportDiagnostic(Diagnostic.Create(DuckCantHandleRefStructs,
+                                method.GetLocation(), DiagnosticSeverity.Error));
+
+                            return "";
+                        }
+
+                        var parameters = method.ParameterList.Parameters
+                            .Select(o =>
+                            (
+                                Name: o.Identifier.Text,
+                                Symbol: semanticModel.GetSpeculativeSymbolInfo(o.Type.SpanStart, o.Type,
+                                    SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol()))
                             .ToArray();
+                        
+                        if (parameters.Any(o => o.Symbol.IsRefLikeType))
+                        {
+                            context.ReportDiagnostic(Diagnostic.Create(DuckCantHandleRefStructs,
+                                method.GetLocation(), DiagnosticSeverity.Error));
+
+                            return "";
+                        }
+
 
                         return
                             $@"
         [System.Diagnostics.DebuggerStepThrough]
-        public {returnType.ToGlobalName()} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
+        public {returnType.ToGlobalName()} {method.Identifier.Text}({parameters.Select(o => $"{o.Symbol.ToGlobalName()} {o.Name}").Join()})
         {{
-            {(returnType.SpecialType == SpecialType.System_Void ? "" : "return ")}_{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
+            {(returnType.SpecialType == SpecialType.System_Void ? "" : "return ")}_{method.Identifier.Text}({parameters.Select(o => o.Name).Join()});
         }}
 ";
                     });
@@ -62,6 +92,14 @@ namespace DuckInterface
                         var returnType = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart, property.Type,
                             SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol();
 
+                        if (returnType.IsRefLikeType)
+                        {
+                            context.ReportDiagnostic(Diagnostic.Create(DuckCantHandleRefStructs,
+                                property.GetLocation(), DiagnosticSeverity.Error));
+
+                            return "";
+                        }
+                        
                         return
                             $@"
         public {returnType.ToGlobalName()} {property.Identifier.Text}
@@ -111,18 +149,20 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
 
                     (string FuncOrAction, string ReturnType) @return =
                         returnType.SpecialType == SpecialType.System_Void
-                            ? ("Action", "")
+                            ? ("Action", string.Empty)
                             : ("Func", returnType.ToGlobalName());
-                    
-                    (string Left, string Right) wrappers = arguments.Any() 
-                        ? ("<", ">") 
-                        : ("", "");
+
+                    (string Left, string Right) wrappers =
+                        arguments.Any() || @return.FuncOrAction == "Func"
+                            ? ("<", ">")
+                            : ("", "");
 
                     return $@"
         [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
         private readonly {@return.FuncOrAction}{arguments
                         .Select(o => o.ToGlobalName())
                         .Concat(new[] {@return.ReturnType})
+                        .Where(o => !string.IsNullOrEmpty(o))
                         .Join()
                         .Wrap(wrappers.Left, wrappers.Right)} _{method.Identifier.Text};";
                 });

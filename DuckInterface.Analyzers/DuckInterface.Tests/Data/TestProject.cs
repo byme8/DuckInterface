@@ -49,6 +49,8 @@ namespace TestProject
         float ValueSet { set; } 
         float Calculate(float a, float b);
         void Save();
+        void Do(System.Threading.CancellationToken token); 
+        byte[] ToArray();
     }
 
     public class AddCalculator
@@ -70,6 +72,15 @@ namespace TestProject
         public void Save()
         {
 
+        }
+
+        public void Do(System.Threading.CancellationToken token) 
+        {
+        }
+
+        public byte[] ToArray()
+        {
+            return null;
         }
     }
 
