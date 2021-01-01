@@ -42,15 +42,18 @@ namespace DuckInterface
                         .Where(o => o.IsDuckInteface)
                         .Select(o =>
                         {
-                            var argumentSyntax = invocation
-                                    .ArgumentList
+                            TypeSyntax argumentSyntax = null;
+                            switch (invocation.ArgumentList
                                     .Arguments[o.Index]
-                                    .Expression switch
-                                {
-                                    IdentifierNameSyntax name => name,
-                                    ObjectCreationExpressionSyntax ctor => ctor.Type,
-                                    _ => null
-                                };
+                                    .Expression)
+                            {
+                                case IdentifierNameSyntax name:
+                                    argumentSyntax = name;
+                                    break;
+                                case ObjectCreationExpressionSyntax ctor:
+                                    argumentSyntax = ctor.Type;
+                                    break;
+                            }
 
                             if (argumentSyntax is null)
                             {

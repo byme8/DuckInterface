@@ -11,14 +11,18 @@ namespace DuckInterface
 {
     public static class Units
     {
-        public static ITypeSymbol? GetTypeSymbol(this SymbolInfo info)
+        public static ITypeSymbol GetTypeSymbol(this SymbolInfo info)
         {
-            return info.Symbol switch
+            switch(info.Symbol)
             {
-                ITypeSymbol type => type,
-                ILocalSymbol local => local.Type,
-                IParameterSymbol parameterSymbol => parameterSymbol.Type,
-                _ => null
+                case ITypeSymbol type: 
+                    return type;
+                case ILocalSymbol local:
+                    return local.Type;
+                case IParameterSymbol parameterSymbol:
+                    return parameterSymbol.Type;
+                default:
+                    return null;
             };
         }
         

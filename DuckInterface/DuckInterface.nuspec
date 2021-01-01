@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+    <metadata>
+        <id>DuckInterface</id>
+        <version>0.1.0</version>
+        <authors>byme</authors>
+        <owners>byme</owners>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>DuckInterface</description>
+        <dependencies>
+            <group targetFramework=".NETStandard2.0">
+                <dependency id="DuckInterface.Core" version="0.1.0" exclude="build,analyzers" />
+                <dependency id="DuckInterface.Analyzers" version="0.1.0" exclude="build,compile,runtime,contentFiles,native" include="analyzers" />
+            </group>
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="**" exclude="**" />
+    </files>
+</package>
