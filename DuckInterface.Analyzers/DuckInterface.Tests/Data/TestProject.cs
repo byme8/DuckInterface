@@ -68,6 +68,8 @@ namespace TestProject
             Doit(calculator); // Main
         }
 
+        // additional 1
+
         public static float Doit(DICalculator calculator)
         {
             return calculator.Calculate(10, calculator.Calculate(10, 20));
@@ -78,7 +80,7 @@ namespace TestProject
             return Doit(calculator);
         }
 
-        // additional
+        // additional 2
     }   
 }
 ";
