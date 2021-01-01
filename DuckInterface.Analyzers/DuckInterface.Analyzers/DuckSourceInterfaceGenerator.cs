@@ -51,6 +51,25 @@ namespace DuckInterface
         }}
 ";
                     });
+                
+                var properties = duckedType
+                    .Members
+                    .OfType<PropertyDeclarationSyntax>()
+                    .Select(property =>
+                    {
+                        var semanticModel= context.Compilation.GetSemanticModel(property.SyntaxTree);
+                        var returnType = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart, property.Type,
+                            SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol();
+
+                        return
+                            $@"
+        public {returnType.ToGlobalName()} {property.Identifier.Text}
+        {{
+            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get") ? $" get {{ return _{property.Identifier.Text}Getter(); }}" : string.Empty)}
+            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "set") ? $" set {{ _{property.Identifier.Text}Setter(value); }}" : string.Empty)}
+        }}
+";
+                    });
 
 
                 var source = $@"
@@ -61,6 +80,7 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
     public partial class D{duckedType.Identifier.Text}
     {{
 {fields.JoinWithNewLine()}        
+{properties.JoinWithNewLine()}
 {fullMethods.JoinWithNewLine()}        
     }}
 }}
