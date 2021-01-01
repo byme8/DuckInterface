@@ -24,7 +24,7 @@ namespace DuckInterface
 
             foreach (var duckedType in duckableTypes)
             {
-                var uniqueName = $"{duckedType.Identifier.Text}_{Guid.NewGuid().ToString().Replace("-", "")}";
+                var uniqueName = $"D{duckedType.Identifier.Text}.cs";
                 var fields = CreateSourceForFields(context, duckedType);
 
                 var fullMethods = duckedType
@@ -32,11 +32,11 @@ namespace DuckInterface
                     .OfType<MethodDeclarationSyntax>()
                     .Select(method =>
                     {
-                        var returnType = method
-                            .DescendantNodes()
-                            .OfType<PredefinedTypeSyntax>()
-                            .Select(oo => oo.Keyword.Text)
-                            .First();
+                        var semanticModel = context.Compilation.GetSemanticModel(method.SyntaxTree);
+                        var returnType = semanticModel
+                            .GetSpeculativeSymbolInfo(method.ReturnType.SpanStart, method.ReturnType,
+                                SpeculativeBindingOption.BindAsTypeOrNamespace)
+                            .GetTypeSymbol();
 
                         var parameters = method
                             .DescendantNodes()
@@ -46,9 +46,9 @@ namespace DuckInterface
                         return
                             $@"
         [System.Diagnostics.DebuggerStepThrough]
-        public {returnType} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
+        public {returnType.ToGlobalName()} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
         {{
-            return _{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
+            {(returnType.SpecialType == SpecialType.System_Void ? "" : "return ")}_{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
         }}
 ";
                     });
@@ -99,14 +99,32 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
                 .OfType<MethodDeclarationSyntax>()
                 .Select(method =>
                 {
-                    var types = method
-                        .DescendantNodes()
-                        .OfType<PredefinedTypeSyntax>()
-                        .Select(oo => oo.Keyword.Text)
+                    var semanticModel = context.Compilation.GetSemanticModel(method.ReturnType.SyntaxTree);
+                    var returnType = semanticModel.GetSpeculativeSymbolInfo(method.ReturnType.SpanStart,
+                        method.ReturnType, SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol();
+
+                    var arguments = method.ParameterList.Parameters
+                        .Select(o => semanticModel.GetSpeculativeSymbolInfo(o.Type.SpanStart, o.Type,
+                                SpeculativeBindingOption.BindAsTypeOrNamespace)
+                            .GetTypeSymbol())
                         .ToArray();
 
-                    return
-                        $"        private readonly Func<{types.Skip(1).Concat(types.Take(1)).Join()}> _{method.Identifier.Text};";
+                    (string FuncOrAction, string ReturnType) @return =
+                        returnType.SpecialType == SpecialType.System_Void
+                            ? ("Action", "")
+                            : ("Func", returnType.ToGlobalName());
+                    
+                    (string Left, string Right) wrappers = arguments.Any() 
+                        ? ("<", ">") 
+                        : ("", "");
+
+                    return $@"
+        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
+        private readonly {@return.FuncOrAction}{arguments
+                        .Select(o => o.ToGlobalName())
+                        .Concat(new[] {@return.ReturnType})
+                        .Join()
+                        .Wrap(wrappers.Left, wrappers.Right)} _{method.Identifier.Text};";
                 });
 
             var properties = duckedType
@@ -125,11 +143,15 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
 
                     var propertyType = propertyTypeInfo.GetTypeSymbol().ToGlobalName();
                     var getter = property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get")
-                        ? $"        private readonly Func<{propertyType}> _{property.Identifier.Text}Getter;"
+                        ? $@"
+        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
+        private readonly Func<{propertyType}> _{property.Identifier.Text}Getter;"
                         : string.Empty;
 
                     var setter = property.AccessorList.Accessors.Any(o => o.Keyword.Text == "set")
-                        ? $"        private readonly Action<{propertyType}> _{property.Identifier.Text}Setter;"
+                        ? $@"
+        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
+        private readonly Action<{propertyType}> _{property.Identifier.Text}Setter;"
                         : string.Empty;
 
                     return new[] {getter, setter};

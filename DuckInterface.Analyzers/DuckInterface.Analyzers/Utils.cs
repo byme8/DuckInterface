@@ -91,6 +91,11 @@ namespace DuckInterface
         {
             return string.Join(separator, values);
         }
+        
+        public static string Wrap(this string text, string left = "", string right = "")
+        {
+            return $"{left}{text}{right}";
+        }
 
         public static string JoinWithNewLine(this IEnumerable<string> values, string separator = "")
         {

@@ -33,7 +33,7 @@ namespace DuckInterface
             {
                 return;
             }
-            
+
             var ducksFromInvocations = GetDucksFromInvocations();
             var ducksFromVariableDeclarations = GetDucksFromVariableDeclarations();
 
@@ -41,7 +41,7 @@ namespace DuckInterface
                 .Concat(ducksFromVariableDeclarations)
                 .Distinct()
                 .ToArray();
-            
+
             if (context.CancellationToken.IsCancellationRequested)
             {
                 return;
@@ -49,8 +49,8 @@ namespace DuckInterface
 
             foreach (var (duckInterface, typeToDuck) in ducks)
             {
-                var uniqueName = duckInterface
-                    .GetUniqueName();
+                var uniqueName =
+                    $"{duckInterface.ToGlobalName().Replace("global::", "")}_{typeToDuck.ToGlobalName().Replace("global::", "")}";
 
                 var properties = duckInterface
                     .GetMembers()
@@ -114,7 +114,7 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                     {
                         yield break;
                     }
-                    
+
                     var semanticModel = context.Compilation.GetSemanticModel(invocation.SyntaxTree);
                     var symbol =
                         semanticModel.GetSpeculativeSymbolInfo(invocation.SpanStart, invocation,
@@ -179,8 +179,8 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                         else
                         {
                             context.ReportDiagnostic(Diagnostic.Create(DuckMappingCantBeDone,
-                                argumentSyntax.GetLocation(), 
-                                duckInterface.Name, 
+                                argumentSyntax.GetLocation(),
+                                duckInterface.Name,
                                 duckableSymbol.Name,
                                 isDuckable.MissingSymbols.Select(o => o.Name).JoinWithNewLine()));
                         }
@@ -196,7 +196,7 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                     {
                         yield break;
                     }
-                    
+
                     var semanticModel = context.Compilation.GetSemanticModel(variableDeclaration.SyntaxTree);
                     var nameWithoutD = variableDeclaration.Type.ToString().Substring(1);
                     var duckInterface = context.Compilation

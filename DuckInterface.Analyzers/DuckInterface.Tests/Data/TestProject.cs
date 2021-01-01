@@ -48,6 +48,7 @@ namespace TestProject
         float ValueGet { get; }
         float ValueSet { set; } 
         float Calculate(float a, float b);
+        void Save();
     }
 
     public class AddCalculator
@@ -64,6 +65,11 @@ namespace TestProject
         public float Calculate(float a, float b)
         {
             return a + b;
+        }
+
+        public void Save()
+        {
+
         }
     }
 
