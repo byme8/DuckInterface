@@ -20,7 +20,7 @@ namespace DuckInterface
             }
 
             var duckableTypes = receiver.DuckableTypes;
-            
+
 
             foreach (var duckedType in duckableTypes)
             {
@@ -52,13 +52,13 @@ namespace DuckInterface
         }}
 ";
                     });
-                
+
                 var properties = duckedType
                     .Members
                     .OfType<PropertyDeclarationSyntax>()
                     .Select(property =>
                     {
-                        var semanticModel= context.Compilation.GetSemanticModel(property.SyntaxTree);
+                        var semanticModel = context.Compilation.GetSemanticModel(property.SyntaxTree);
                         var returnType = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart, property.Type,
                             SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol();
 
@@ -78,7 +78,7 @@ using System;
 
 namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name} 
 {{
-    public partial class D{duckedType.Identifier.Text}
+    public partial class D{duckedType.Identifier.Text} : {duckedType.Identifier.Text} 
     {{
 {fields.JoinWithNewLine()}        
 {properties.JoinWithNewLine()}
@@ -115,14 +115,15 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
                 .SelectMany(property =>
                 {
                     var semanticModel = context.Compilation.GetSemanticModel(property.SyntaxTree);
-                    var propertyTypeInfo = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart, property.Type, SpeculativeBindingOption.BindAsTypeOrNamespace);
+                    var propertyTypeInfo = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart,
+                        property.Type, SpeculativeBindingOption.BindAsTypeOrNamespace);
 
                     if (propertyTypeInfo.Symbol is null)
                     {
                         return new string[0];
                     }
 
-                    var propertyType = propertyTypeInfo.GetTypeSymbol().ToGlobalName(); 
+                    var propertyType = propertyTypeInfo.GetTypeSymbol().ToGlobalName();
                     var getter = property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get")
                         ? $"        private readonly Func<{propertyType}> _{property.Identifier.Text}Getter;"
                         : string.Empty;

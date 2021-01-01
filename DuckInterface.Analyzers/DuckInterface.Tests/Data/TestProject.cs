@@ -84,12 +84,18 @@ namespace TestProject
 
         public static float Doit(DICalculator calculator)
         {
+            var @interface = DuckToInterface(calculator); 
             return calculator.Calculate(10, calculator.Calculate(10, 20));
         }
 
         public static float Doit2(AddCalculator calculator)
         {
             return Doit(calculator);
+        }
+
+        public static float DuckToInterface(ICalculator calculator)
+        {
+            return calculator.Calculate(10, calculator.Calculate(10, 20));
         }
 
         // additional 2
