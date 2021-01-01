@@ -42,9 +42,7 @@ namespace DuckInterface.Test
                 .ToArray();
 
             Assert.IsTrue(
-                diagnostics.Any(o =>
-                    o.GetMessage() ==
-                    "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.DICalculator'"),
+                diagnostics.Any(o =>o.GetMessage() == "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.DICalculator'"),
                 "Type with different public interface should be ignored.");
         }
 
@@ -141,6 +139,30 @@ namespace DuckInterface.Test
                 .ToArray();
 
             Assert.IsFalse(diagnostics.Any(), diagnostics.Select(o => o.GetMessage()).JoinWithNewLine());
+        }
+        
+        [TestMethod]
+        public async Task CountsForMissingProperties()
+        {
+            var toReplace = new[]
+            {
+                ("public float Value { get; set; } //", @"" ),
+            };
+
+            var updatedProject = toReplace.Aggregate(TestProject.Project,
+                (project, tuple) => project.ReplacePartOfDocumentAsync("Program.cs", tuple.Item1, tuple.Item2).Result);
+
+            var newProject = await updatedProject.ApplyDuckGenerators();
+
+            var compilation = await newProject.GetCompilationAsync();
+            var diagnostics = compilation
+                .GetDiagnostics()
+                .Where(o => o.Severity == DiagnosticSeverity.Error)
+                .ToArray();
+
+            Assert.IsTrue(
+                diagnostics.Any(o =>o.GetMessage() == "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.DICalculator'"),
+                "Type with different public interface should be ignored.");
         }
     }
 }

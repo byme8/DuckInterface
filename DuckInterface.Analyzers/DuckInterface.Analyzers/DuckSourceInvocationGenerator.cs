@@ -9,6 +9,16 @@ namespace DuckInterface
     [Generator]
     public class DuckSourceInvocationGenerator : ISourceGenerator
     {
+        private static readonly DiagnosticDescriptor DuckMappingCantBeDone =
+            new DiagnosticDescriptor(
+                nameof(DuckMappingCantBeDone),
+                "Duck mapping is not possible",
+                @"Duck mapping between '{0}' and '{1}' is not possible. Next members are missing: {2}",
+                "Duck Typing",
+                DiagnosticSeverity.Error,
+                isEnabledByDefault: true,
+                description: "Duck mapping is not possible.");
+
         public void Execute(GeneratorExecutionContext context)
         {
             if (!(context.SyntaxReceiver is DuckSyntaxInvocationReceiver receiver))
@@ -18,6 +28,11 @@ namespace DuckInterface
 
             var duckAttribute = context.Compilation.GetTypeByMetadataName("DuckAttribute");
             var duckableAttribute = context.Compilation.GetTypeByMetadataName("DuckableAttribute");
+
+            if (context.CancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
             
             var ducksFromInvocations = GetDucksFromInvocations();
             var ducksFromVariableDeclarations = GetDucksFromVariableDeclarations();
@@ -25,13 +40,43 @@ namespace DuckInterface
             var ducks = ducksFromInvocations
                 .Concat(ducksFromVariableDeclarations)
                 .Distinct()
-                .Where(o => o.DuckInteface.IsTypeDuckableTo(o.TypeToDuck))
                 .ToArray();
+            
+            if (context.CancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
 
             foreach (var (duckInterface, typeToDuck) in ducks)
             {
                 var uniqueName = duckInterface
                     .GetUniqueName();
+
+                var properties = duckInterface
+                    .GetMembers()
+                    .OfType<IPropertySymbol>()
+                    .SelectMany(o =>
+                    {
+                        var getter = o.GetMethod != null
+                            ? $"             _{o.Name}Getter = () => value.{o.Name};"
+                            : string.Empty;
+                        var setter = o.SetMethod != null
+                            ? $"             _{o.Name}Setter = o => value.{o.Name} = o;"
+                            : string.Empty;
+
+                        return new[] {getter, setter};
+                    })
+                    .Where(o => !string.IsNullOrEmpty(o))
+                    .JoinWithNewLine();
+
+
+                var methods = duckInterface
+                    .GetMembers()
+                    .OfType<IMethodSymbol>()
+                    .Where(o => o.MethodKind == MethodKind.Ordinary)
+                    .Select(o => $"             _{o.Name} = value.{o.Name};")
+                    .JoinWithNewLine();
+
 
                 var source = $@"
 using System;
@@ -42,12 +87,8 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
     {{
         private D{duckInterface.Name}({typeToDuck.ToGlobalName()} value) 
         {{
-{duckInterface
-        .GetMembers()
-        .OfType<IMethodSymbol>()
-        .Where(o => o.Name != ".ctor")
-        .Select(o => $"             _{o.Name} = value.{o.Name};")
-        .JoinWithNewLine()}
+{properties}
+{methods}
         }}
 
         public static implicit operator D{duckInterface.Name}({typeToDuck.ToGlobalName()} value)
@@ -57,6 +98,11 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
     }}
 }}
 ";
+                if (context.CancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 context.AddSource(uniqueName, source.ToSourceText());
             }
 
@@ -64,6 +110,11 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
             {
                 foreach (var invocation in receiver.Invocations)
                 {
+                    if (context.CancellationToken.IsCancellationRequested)
+                    {
+                        yield break;
+                    }
+                    
                     var semanticModel = context.Compilation.GetSemanticModel(invocation.SyntaxTree);
                     var symbol =
                         semanticModel.GetSpeculativeSymbolInfo(invocation.SpanStart, invocation,
@@ -82,10 +133,11 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                         {
                             continue;
                         }
-                        
+
                         var nameWithoutD = parameter.Type.Name.Substring(1);
                         var duckInterface = context.Compilation
-                            .GetSymbolsWithName(o => o.EndsWith(nameWithoutD), SymbolFilter.Type, context.CancellationToken)
+                            .GetSymbolsWithName(o => o.EndsWith(nameWithoutD), SymbolFilter.Type,
+                                context.CancellationToken)
                             .OfType<ITypeSymbol>()
                             .FirstOrDefault(s => s
                                 .GetAttributes()
@@ -95,7 +147,7 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                         {
                             continue;
                         }
-                        
+
                         TypeSyntax argumentSyntax = null;
                         switch (invocation.ArgumentList.Arguments[i].Expression)
                         {
@@ -118,7 +170,20 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
 
                         var duckableSymbol = speculativeArgumentSymbol.GetTypeSymbol();
 
-                        yield return (duckInterface, duckableSymbol);
+                        var isDuckable = duckInterface.IsTypeDuckableTo(duckableSymbol);
+
+                        if (isDuckable.IsDuckable)
+                        {
+                            yield return (duckInterface, duckableSymbol);
+                        }
+                        else
+                        {
+                            context.ReportDiagnostic(Diagnostic.Create(DuckMappingCantBeDone,
+                                argumentSyntax.GetLocation(), 
+                                duckInterface.Name, 
+                                duckableSymbol.Name,
+                                isDuckable.MissingSymbols.Select(o => o.Name).JoinWithNewLine()));
+                        }
                     }
                 }
             }
@@ -127,6 +192,11 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
             {
                 foreach (var variableDeclaration in receiver.VariableDeclarations)
                 {
+                    if (context.CancellationToken.IsCancellationRequested)
+                    {
+                        yield break;
+                    }
+                    
                     var semanticModel = context.Compilation.GetSemanticModel(variableDeclaration.SyntaxTree);
                     var nameWithoutD = variableDeclaration.Type.ToString().Substring(1);
                     var duckInterface = context.Compilation
@@ -140,7 +210,7 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                     {
                         continue;
                     }
-                    
+
                     var value = variableDeclaration.DescendantNodes().OfType<EqualsValueClauseSyntax>().First().Value;
                     var typeToDuckSymbol =
                         semanticModel.GetSpeculativeSymbolInfo(value.SpanStart, value,
@@ -151,8 +221,8 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                     {
                         continue;
                     }
-                    
-                    yield return  (duckInterface, typeToDuck);
+
+                    yield return (duckInterface, typeToDuck);
                 }
             }
         }

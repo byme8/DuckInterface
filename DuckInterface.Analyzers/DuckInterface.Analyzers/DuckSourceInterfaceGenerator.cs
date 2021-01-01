@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -19,24 +20,13 @@ namespace DuckInterface
             }
 
             var duckableTypes = receiver.DuckableTypes;
+            
 
             foreach (var duckedType in duckableTypes)
             {
                 var uniqueName = $"{duckedType.Identifier.Text}_{Guid.NewGuid().ToString().Replace("-", "")}";
-                var fields = duckedType
-                    .Members
-                    .OfType<MethodDeclarationSyntax>()
-                    .Select(method =>
-                    {
-                        var types = method
-                            .DescendantNodes()
-                            .OfType<PredefinedTypeSyntax>()
-                            .Select(oo => oo.Keyword.Text)
-                            .ToArray();
+                var fields = CreateSourceForFields(context, duckedType);
 
-                        return $"        private readonly Func<{types.Skip(1).Concat(types.Take(1)).Join()}> _{method.Identifier.Text};";
-                    });
-                
                 var fullMethods = duckedType
                     .Members
                     .OfType<MethodDeclarationSyntax>()
@@ -52,17 +42,17 @@ namespace DuckInterface
                             .DescendantNodes()
                             .OfType<ParameterSyntax>()
                             .ToArray();
-                        
+
                         return
-$@"
+                            $@"
         public {returnType} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
         {{
             return _{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
         }}
 ";
                     });
-                
-                
+
+
                 var source = $@"
 using System;
 
@@ -79,12 +69,59 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
             }
         }
 
+        private IEnumerable<string> CreateSourceForFields(
+            GeneratorExecutionContext context,
+            TypeDeclarationSyntax duckedType)
+        {
+            var methods = duckedType
+                .Members
+                .OfType<MethodDeclarationSyntax>()
+                .Select(method =>
+                {
+                    var types = method
+                        .DescendantNodes()
+                        .OfType<PredefinedTypeSyntax>()
+                        .Select(oo => oo.Keyword.Text)
+                        .ToArray();
+
+                    return
+                        $"        private readonly Func<{types.Skip(1).Concat(types.Take(1)).Join()}> _{method.Identifier.Text};";
+                });
+
+            var properties = duckedType
+                .Members
+                .OfType<PropertyDeclarationSyntax>()
+                .SelectMany(property =>
+                {
+                    var semanticModel = context.Compilation.GetSemanticModel(property.SyntaxTree);
+                    var propertyTypeInfo = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart, property.Type, SpeculativeBindingOption.BindAsTypeOrNamespace);
+
+                    if (propertyTypeInfo.Symbol is null)
+                    {
+                        return new string[0];
+                    }
+
+                    var propertyType = propertyTypeInfo.GetTypeSymbol().ToGlobalName(); 
+                    var getter = property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get")
+                        ? $"        private readonly Func<{propertyType}> _{property.Identifier.Text}Getter;"
+                        : string.Empty;
+
+                    var setter = property.AccessorList.Accessors.Any(o => o.Keyword.Text == "set")
+                        ? $"        private readonly Action<{propertyType}> _{property.Identifier.Text}Setter;"
+                        : string.Empty;
+
+                    return new[] {getter, setter};
+                });
+
+            return properties.Concat(methods);
+        }
+
         public void Initialize(GeneratorInitializationContext context)
         {
             context.RegisterForSyntaxNotifications(() => new DuckSyntaxInterfaceReceiver());
         }
     }
-    
+
 
     public class DuckSyntaxInterfaceReceiver : ISyntaxReceiver
     {

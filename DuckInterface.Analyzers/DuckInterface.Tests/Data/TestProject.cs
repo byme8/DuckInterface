@@ -44,11 +44,23 @@ namespace TestProject
     [Duckable]
     public interface ICalculator
     {
+        float Value { get; set; } 
+        float ValueGet { get; }
+        float ValueSet { set; } 
         float Calculate(float a, float b);
     }
 
     public class AddCalculator
     {
+        public float Value { get; set; } //
+        public float ValueGet { get; }
+        public float ValueSet
+        { 
+            set 
+            {
+            } 
+        } 
+
         public float Calculate(float a, float b)
         {
             return a + b;

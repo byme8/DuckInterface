@@ -13,9 +13,9 @@ namespace DuckInterface
     {
         public static ITypeSymbol GetTypeSymbol(this SymbolInfo info)
         {
-            switch(info.Symbol)
+            switch (info.Symbol)
             {
-                case ITypeSymbol type: 
+                case ITypeSymbol type:
                     return type;
                 case ILocalSymbol local:
                     return local.Type;
@@ -23,50 +23,65 @@ namespace DuckInterface
                     return parameterSymbol.Type;
                 default:
                     return null;
-            };
+            }
+
+            ;
         }
-        
-        public static bool IsTypeDuckableTo(this ITypeSymbol @interface, ITypeSymbol implementation)
+
+        public static (bool IsDuckable, IEnumerable<ISymbol> MissingSymbols) IsTypeDuckableTo(
+            this ITypeSymbol @interface, ITypeSymbol implementation)
         {
-            var methodsToDuck = @interface
-                .GetMembers()
-                .OfType<IMethodSymbol>()
-                .Where(o => o.Name != ".ctor")
-                .Select(o => 
-                    o.ReturnType.ToGlobalName() + 
-                    o.Name + 
-                    o.Parameters
-                        .Select(oo => oo.Type.ToGlobalName() + oo.Name)
-                        .Join())
+            var methodsToDuck = MemberThatCanBeDucked(@interface);
+            var memberThatCanBeDucked = MemberThatCanBeDucked(implementation);
+
+            var missingSymbols = methodsToDuck
+                .Where(o => !memberThatCanBeDucked.ContainsKey(o.Key))
+                .Select(o => o.Value)
                 .ToArray();
 
-            var memberThatCanBeDucked = implementation
+            return (!missingSymbols.Any(), missingSymbols);
+        }
+
+        private static Dictionary<string, ISymbol> MemberThatCanBeDucked(ITypeSymbol type)
+        {
+            return type
                 .GetMembers()
                 .OfType<IMethodSymbol>()
+                .Where(o => o.MethodKind == MethodKind.Ordinary)
+                .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
                 .Select(o =>
-                    o.ReturnType.ToGlobalName() + 
-                    o.Name + 
+                (
+                    Key:
+                    o.ReturnType.ToGlobalName() +
+                    o.Name +
                     o.Parameters
                         .Select(oo => oo.Type.ToGlobalName() + oo.Name)
-                        .Join())
-                .ToImmutableHashSet();
-
-            var canBeDuck = methodsToDuck
-                .All(o => memberThatCanBeDucked.Contains(o));
-
-            return canBeDuck;
+                        .Join(),
+                    Value: (ISymbol) o
+                ))
+                .Concat(type
+                    .GetMembers()
+                    .OfType<IPropertySymbol>()
+                    .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
+                    .Select(o =>
+                    (
+                        Key: o.Type.ToGlobalName() + o.Name + (o.GetMethod != null ? "getter" : string.Empty) +
+                             (o.SetMethod != null ? "setter" : string.Empty),
+                        Value: (ISymbol) o
+                    )))
+                .ToDictionary(o => o.Key, o => o.Value);
         }
-        
+
         public static string GetUniqueName(this ITypeSymbol type)
         {
             return $"{type.Name}_{Guid.NewGuid().ToString().Replace("-", "")}";
         }
-        
+
         public static SourceText ToSourceText(this string source)
         {
             return SourceText.From(source, Encoding.UTF8);
         }
-        
+
         public static string ToGlobalName(this ISymbol symbol)
         {
             return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
