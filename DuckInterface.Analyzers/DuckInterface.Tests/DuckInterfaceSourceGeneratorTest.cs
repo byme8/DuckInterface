@@ -42,7 +42,7 @@ namespace DuckInterface.Test
                 .ToArray();
             
             Assert.IsTrue(
-                diagnostics.Any(o => o.GetMessage() == "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.DCalculator'"), 
+                diagnostics.Any(o => o.GetMessage() == "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.DICalculator'"), 
                 "Type with different public interface should be ignored.");
         }
         
