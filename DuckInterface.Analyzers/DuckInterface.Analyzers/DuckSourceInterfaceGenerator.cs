@@ -45,6 +45,7 @@ namespace DuckInterface
 
                         return
                             $@"
+        [System.Diagnostics.DebuggerStepThrough]
         public {returnType} {method.Identifier.Text}({parameters.Select(o => $"{o.Type.ToString()} {o.Identifier.Text}").Join()})
         {{
             return _{method.Identifier.Text}({parameters.Select(o => o.Identifier.Text).Join()});
@@ -65,8 +66,8 @@ namespace DuckInterface
                             $@"
         public {returnType.ToGlobalName()} {property.Identifier.Text}
         {{
-            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get") ? $" get {{ return _{property.Identifier.Text}Getter(); }}" : string.Empty)}
-            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "set") ? $" set {{ _{property.Identifier.Text}Setter(value); }}" : string.Empty)}
+            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get") ? $" [System.Diagnostics.DebuggerStepThrough] get {{ return _{property.Identifier.Text}Getter(); }}" : string.Empty)}
+            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "set") ? $" [System.Diagnostics.DebuggerStepThrough] set {{ _{property.Identifier.Text}Setter(value); }}" : string.Empty)}
         }}
 ";
                     });
