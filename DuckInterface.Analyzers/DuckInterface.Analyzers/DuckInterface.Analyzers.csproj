@@ -5,7 +5,6 @@
     <PackageId>DuckInterface.Analyzers</PackageId>
     <Authors>byme</Authors>
     <Version>0.1.0</Version>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
