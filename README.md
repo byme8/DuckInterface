@@ -66,7 +66,7 @@ And it's done. The compilation errors are gone and everything works as expected.
 There are two independent source generators. The first one looks for ``` Duckable ``` attribute and generates a 'base' class for the interface. 
 For example, for the ``` ICalculator ``` it will look like that:
 ``` cs 
- public partial class DICalculator : ICalculator 
+public partial class DICalculator : ICalculator 
 {
   [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
   private readonly Func<float, float, float> _Calculate;        
