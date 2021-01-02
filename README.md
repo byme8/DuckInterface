@@ -63,7 +63,7 @@ And it's done. The compilation errors are gone and everything works as expected.
 
 # How it works
 
-There are two independent source generators. The first one looks for ``` Duckable ``` attribute and generates 'base' class for the interface. 
+There are two independent source generators. The first one looks for ``` Duckable ``` attribute and generates a 'base' class for the interface. 
 For example, for the ``` ICalculator ``` it will look like that:
 ``` cs 
  public partial class DICalculator : ICalculator 
@@ -79,14 +79,14 @@ For example, for the ``` ICalculator ``` it will look like that:
 }
 ```
 
-The second one looks for method call and variable assignments to undestand how the duckable interface may be used. 
+The second one looks for a method call and variable assignments to understand how the duckable interface may be used. 
 For example, lets look for next snippet:
 ``` cs
 var result = Do(addCalculator, 10, 20);
 ``` 
 
-The analyzer will see that the ``` Do ``` method has argument with type ``` DICalculator ```, then it will check the type of ``` addCalculator ``` variable.
-If the type has all required members, the source generator will extend the ``` DICalculator ```. The extension will look like that:
+The analyzer will see that the ``` Do ``` method has an argument with type ``` DICalculator ```, then it will check the type of ``` addCalculator ``` variable.
+If the type has all the required members, the source generator will extend the ``` DICalculator ```. The extension will look like that:
 ``` cs
 public partial class DICalculator
 {
