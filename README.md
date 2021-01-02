@@ -1,7 +1,7 @@
 # DuckInterface
 
 This repository contains my attempt to enable duck typing support in C#. It is powered by Roslyn and new C# 9 feature the Source Generators. 
-I would say it is purly accademic/just for fun stuff, but for some scenarios it can be usefull.
+I would say it is purly accademic/just for fun stuff, but for some scenarios it can be useful.
 
 [![Nuget](https://img.shields.io/badge/nuget-DuckInterface-blue?style=flat-square&logo=nuget)](https://www.nuget.org/packages/DuckInterface/)
 
@@ -33,7 +33,7 @@ float Do(ICalculator calculator, float a, float b)
 }
 
 ```
-In this case duck typing can be heplfull, because it will allow us to pass ``` AddCalculator ``` with ease. The ``` DuckInterface ``` may help with it. 
+In this case duck typing can be heplful, because it will allow us to pass ``` AddCalculator ``` with ease. The ``` DuckInterface ``` may help with it. 
 You will need to install nuget package and update interface declartion like that:
 
 ``` cs 
