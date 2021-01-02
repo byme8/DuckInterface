@@ -1,6 +1,6 @@
 # DuckInterface
 
-This repository contains my attempt for enabling duck typing support in C#. It is powered by Roslyn and new C# 9 feature Source Generators. 
+This repository contains my attempt to enable duck typing support in C#. It is powered by Roslyn and new C# 9 feature the Source Generators. 
 I would say it is purly accademic/just for fun stuff, but for some scenarios it can be usefull.
 
 [![Nuget](https://img.shields.io/badge/nuget-DuckInterface-blue?style=flat-square&logo=nuget)](https://www.nuget.org/packages/DuckInterface/)
@@ -20,7 +20,7 @@ public class AddCalculator
 }
 ```
 It is impotant to notice that the ``` AddCalculator ``` doesn't implement a ``` ICalculator ``` in any way. It just have an indentical method declaration.
-Of cause, if we try to use it like in next snippet we will get a compilation error:
+If we try to use it like in next snippet we will get a compilation error:
 
 ``` cs
 var addCalculator = new AddCalculator();
