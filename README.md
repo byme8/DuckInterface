@@ -9,7 +9,20 @@ I would say it is purely academic/just for fun stuff, but for some scenarios, it
 
 Let's suppose that you have the next declaration:
 
+``` cs 
+public interface ICalculator
+{
+  float Calculate(float a, float b);
+}
+
+
+public class AddCalculator
 <script src="https://gist.github.com/byme8/17175405d63a9c21134679f6bd6e3d41.js"></script>
+{
+
+  float Calculate(float a, float b);
+}
+```
 
 It is important to notice that the ``` AddCalculator ``` doesn't implement a ``` ICalculator ``` in any way. It just has an identical method declaration.
 If we try to use it like in the next snippet we will get a compilation error:
