@@ -15,9 +15,7 @@ public interface ICalculator
   float Calculate(float a, float b);
 }
 
-
 public class AddCalculator
-<script src="https://gist.github.com/byme8/17175405d63a9c21134679f6bd6e3d41.js"></script>
 {
 
   float Calculate(float a, float b);
