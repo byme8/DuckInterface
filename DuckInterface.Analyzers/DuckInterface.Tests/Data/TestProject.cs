@@ -32,7 +32,7 @@ namespace DuckInterface.Test.Data
                 MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Attribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ArrayPool<>).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(DuckAttribute).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(DuckableAttribute).Assembly.Location),
             };
         }
         
@@ -53,10 +53,14 @@ namespace TestProject
         byte[] ToArray();
     }
 
-    public class AddCalculator
+    public class BaseCalculator 
+    {
+        public float ValueGet { get; }
+    }
+
+    public class AddCalculator : BaseCalculator
     {
         public float Value { get; set; } //
-        public float ValueGet { get; }
         public float ValueSet
         { 
             set 

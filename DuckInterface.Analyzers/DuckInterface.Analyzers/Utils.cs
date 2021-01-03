@@ -11,6 +11,22 @@ namespace DuckInterface
 {
     public static class Units
     {
+        public static IEnumerable<ISymbol> GetAllMembers(this ITypeSymbol symbol)
+        {
+            if (symbol.BaseType != null)
+            {
+                foreach (var member in symbol.BaseType.GetAllMembers())
+                {
+                    yield return member;
+                }
+            }
+
+            foreach (var member in symbol.GetMembers())
+            {
+                yield return member;
+            }
+        }
+        
         public static ITypeSymbol GetTypeSymbol(this SymbolInfo info)
         {
             switch (info.Symbol)
@@ -24,6 +40,14 @@ namespace DuckInterface
                 default:
                     return null;
             }
+        }
+        
+        public static IEnumerable<IMethodSymbol> GetPublicMethods(this IEnumerable<ISymbol> members)
+        {
+            return members
+                .OfType<IMethodSymbol>()
+                .Where(o => o.DeclaredAccessibility == Accessibility.Public)
+                .Where(o => o.MethodKind == MethodKind.Ordinary);
         }
 
         public static (bool IsDuckable, IEnumerable<ISymbol> MissingSymbols) IsTypeDuckableTo(
@@ -43,10 +67,8 @@ namespace DuckInterface
         private static Dictionary<string, ISymbol> MemberThatCanBeDucked(ITypeSymbol type)
         {
             return type
-                .GetMembers()
-                .OfType<IMethodSymbol>()
-                .Where(o => o.MethodKind == MethodKind.Ordinary)
-                .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
+                .GetAllMembers()
+                .GetPublicMethods()
                 .Select(o =>
                 (
                     Key:
@@ -58,7 +80,7 @@ namespace DuckInterface
                     Value: (ISymbol) o
                 ))
                 .Concat(type
-                    .GetMembers()
+                    .GetAllMembers()
                     .OfType<IPropertySymbol>()
                     .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
                     .Select(o =>

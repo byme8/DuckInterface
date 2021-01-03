@@ -30,44 +30,32 @@ namespace DuckInterface
             }
 
             var duckableTypes = receiver.DuckableTypes;
-
-
-            foreach (var duckedType in duckableTypes)
+            foreach (var duckedTypeDeclaration in duckableTypes)
             {
-                var uniqueName = $"D{duckedType.Identifier.Text}.cs";
-                var fields = CreateSourceForFields(context, duckedType);
+                var semanticModel = context.Compilation.GetSemanticModel(duckedTypeDeclaration.SyntaxTree);
+                var duckedType = semanticModel.GetDeclaredSymbol(duckedTypeDeclaration, context.CancellationToken);
+                var uniqueName = $"D{duckedType.Name}.cs";
 
+                var fields = CreateSourceForFields(context, duckedType);
                 var fullMethods = duckedType
-                    .Members
-                    .OfType<MethodDeclarationSyntax>()
+                    .GetAllMembers()
+                    .GetPublicMethods()
                     .Select(method =>
                     {
-                        var semanticModel = context.Compilation.GetSemanticModel(method.SyntaxTree);
-                        var returnType = semanticModel
-                            .GetSpeculativeSymbolInfo(method.ReturnType.SpanStart, method.ReturnType,
-                                SpeculativeBindingOption.BindAsTypeOrNamespace)
-                            .GetTypeSymbol();
-
+                        var returnType = method.ReturnType;
                         if (returnType.IsRefLikeType)
                         {
                             context.ReportDiagnostic(Diagnostic.Create(DuckCantHandleRefStructs,
-                                method.GetLocation(), DiagnosticSeverity.Error));
+                                duckedTypeDeclaration.GetLocation(), DiagnosticSeverity.Error));
 
                             return "";
                         }
 
-                        var parameters = method.ParameterList.Parameters
-                            .Select(o =>
-                            (
-                                Name: o.Identifier.Text,
-                                Symbol: semanticModel.GetSpeculativeSymbolInfo(o.Type.SpanStart, o.Type,
-                                    SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol()))
-                            .ToArray();
-                        
-                        if (parameters.Any(o => o.Symbol.IsRefLikeType))
+                        var parameters = method.Parameters;
+                        if (parameters.Any(o => o.Type.IsRefLikeType))
                         {
                             context.ReportDiagnostic(Diagnostic.Create(DuckCantHandleRefStructs,
-                                method.GetLocation(), DiagnosticSeverity.Error));
+                                duckedTypeDeclaration.GetLocation(), DiagnosticSeverity.Error));
 
                             return "";
                         }
@@ -76,36 +64,33 @@ namespace DuckInterface
                         return
                             $@"
         [System.Diagnostics.DebuggerStepThrough]
-        public {returnType.ToGlobalName()} {method.Identifier.Text}({parameters.Select(o => $"{o.Symbol.ToGlobalName()} {o.Name}").Join()})
+        public {returnType.ToGlobalName()} {method.Name}({parameters.Select(o => $"{o.Type.ToGlobalName()} {o.Name}").Join()})
         {{
-            {(returnType.SpecialType == SpecialType.System_Void ? "" : "return ")}_{method.Identifier.Text}({parameters.Select(o => o.Name).Join()});
+            {(returnType.SpecialType == SpecialType.System_Void ? "" : "return ")}_{method.Name}({parameters.Select(o => o.Name).Join()});
         }}
 ";
                     });
 
                 var properties = duckedType
-                    .Members
-                    .OfType<PropertyDeclarationSyntax>()
+                    .GetAllMembers()
+                    .OfType<IPropertySymbol>()
                     .Select(property =>
                     {
-                        var semanticModel = context.Compilation.GetSemanticModel(property.SyntaxTree);
-                        var returnType = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart, property.Type,
-                            SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol();
-
+                        var returnType = property.Type;
                         if (returnType.IsRefLikeType)
                         {
                             context.ReportDiagnostic(Diagnostic.Create(DuckCantHandleRefStructs,
-                                property.GetLocation(), DiagnosticSeverity.Error));
+                                duckedTypeDeclaration.GetLocation(), DiagnosticSeverity.Error));
 
                             return "";
                         }
-                        
+
                         return
                             $@"
-        public {returnType.ToGlobalName()} {property.Identifier.Text}
+        public {returnType.ToGlobalName()} {property.Name}
         {{
-            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get") ? $" [System.Diagnostics.DebuggerStepThrough] get {{ return _{property.Identifier.Text}Getter(); }}" : string.Empty)}
-            {(property.AccessorList.Accessors.Any(o => o.Keyword.Text == "set") ? $" [System.Diagnostics.DebuggerStepThrough] set {{ _{property.Identifier.Text}Setter(value); }}" : string.Empty)}
+            {(property.GetMethod != null ? $" [System.Diagnostics.DebuggerStepThrough] get {{ return _{property.Name}Getter(); }}" : string.Empty)}
+            {(property.SetMethod != null ? $" [System.Diagnostics.DebuggerStepThrough] set {{ _{property.Name}Setter(value); }}" : string.Empty)}
         }}
 ";
                     });
@@ -114,9 +99,9 @@ namespace DuckInterface
                 var source = $@"
 using System;
 
-namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name} 
+namespace {duckedType.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces))} 
 {{
-    public partial class D{duckedType.Identifier.Text} : {duckedType.Identifier.Text} 
+    public partial class D{duckedType.Name} : {duckedType.Name} 
     {{
 {fields.JoinWithNewLine()}        
 {properties.JoinWithNewLine()}
@@ -130,25 +115,18 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
 
         private IEnumerable<string> CreateSourceForFields(
             GeneratorExecutionContext context,
-            TypeDeclarationSyntax duckedType)
+            ITypeSymbol duckedType)
         {
             var methods = duckedType
-                .Members
-                .OfType<MethodDeclarationSyntax>()
+                .GetAllMembers()
+                .GetPublicMethods()
                 .Select(method =>
                 {
-                    var semanticModel = context.Compilation.GetSemanticModel(method.ReturnType.SyntaxTree);
-                    var returnType = semanticModel.GetSpeculativeSymbolInfo(method.ReturnType.SpanStart,
-                        method.ReturnType, SpeculativeBindingOption.BindAsTypeOrNamespace).GetTypeSymbol();
-
-                    var arguments = method.ParameterList.Parameters
-                        .Select(o => semanticModel.GetSpeculativeSymbolInfo(o.Type.SpanStart, o.Type,
-                                SpeculativeBindingOption.BindAsTypeOrNamespace)
-                            .GetTypeSymbol())
-                        .ToArray();
+                    var returnType = method.ReturnType;
+                    var arguments = method.Parameters;
 
                     (string FuncOrAction, string ReturnType) @return =
-                        returnType.SpecialType == SpecialType.System_Void
+                        method.ReturnsVoid
                             ? ("Action", string.Empty)
                             : ("Func", returnType.ToGlobalName());
 
@@ -160,38 +138,30 @@ namespace {(duckedType.Parent as NamespaceDeclarationSyntax).Name}
                     return $@"
         [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
         private readonly {@return.FuncOrAction}{arguments
-                        .Select(o => o.ToGlobalName())
+                        .Select(o => o.Type.ToGlobalName())
                         .Concat(new[] {@return.ReturnType})
                         .Where(o => !string.IsNullOrEmpty(o))
                         .Join()
-                        .Wrap(wrappers.Left, wrappers.Right)} _{method.Identifier.Text};";
+                        .Wrap(wrappers.Left, wrappers.Right)} _{method.Name};";
                 });
 
             var properties = duckedType
-                .Members
-                .OfType<PropertyDeclarationSyntax>()
+                .GetAllMembers()
+                .OfType<IPropertySymbol>()
+                .Where(o => o.DeclaredAccessibility == Accessibility.Public)
                 .SelectMany(property =>
                 {
-                    var semanticModel = context.Compilation.GetSemanticModel(property.SyntaxTree);
-                    var propertyTypeInfo = semanticModel.GetSpeculativeSymbolInfo(property.Type.SpanStart,
-                        property.Type, SpeculativeBindingOption.BindAsTypeOrNamespace);
-
-                    if (propertyTypeInfo.Symbol is null)
-                    {
-                        return new string[0];
-                    }
-
-                    var propertyType = propertyTypeInfo.GetTypeSymbol().ToGlobalName();
-                    var getter = property.AccessorList.Accessors.Any(o => o.Keyword.Text == "get")
+                    var propertyType = property.Type.ToGlobalName();
+                    var getter = property.GetMethod != null
                         ? $@"
         [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
-        private readonly Func<{propertyType}> _{property.Identifier.Text}Getter;"
+        private readonly Func<{propertyType}> _{property.Name}Getter;"
                         : string.Empty;
 
-                    var setter = property.AccessorList.Accessors.Any(o => o.Keyword.Text == "set")
+                    var setter = property.SetMethod != null
                         ? $@"
         [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
-        private readonly Action<{propertyType}> _{property.Identifier.Text}Setter;"
+        private readonly Action<{propertyType}> _{property.Name}Setter;"
                         : string.Empty;
 
                     return new[] {getter, setter};

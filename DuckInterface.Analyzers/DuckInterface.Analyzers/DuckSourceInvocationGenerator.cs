@@ -26,9 +26,7 @@ namespace DuckInterface
                 return;
             }
 
-            var duckAttribute = context.Compilation.GetTypeByMetadataName("DuckAttribute");
             var duckableAttribute = context.Compilation.GetTypeByMetadataName("DuckableAttribute");
-
             if (context.CancellationToken.IsCancellationRequested)
             {
                 return;
@@ -71,9 +69,8 @@ namespace DuckInterface
 
 
                 var methods = duckInterface
-                    .GetMembers()
-                    .OfType<IMethodSymbol>()
-                    .Where(o => o.MethodKind == MethodKind.Ordinary)
+                    .GetAllMembers()
+                    .GetPublicMethods()
                     .Select(o => $"             _{o.Name} = value.{o.Name};")
                     .JoinWithNewLine();
 
@@ -169,9 +166,7 @@ namespace {(duckInterface.ContainingNamespace.ToDisplayString())}
                                 SpeculativeBindingOption.BindAsExpression);
 
                         var duckableSymbol = speculativeArgumentSymbol.GetTypeSymbol();
-
                         var isDuckable = duckInterface.IsTypeDuckableTo(duckableSymbol);
-
                         if (isDuckable.IsDuckable)
                         {
                             yield return (duckInterface, duckableSymbol);
