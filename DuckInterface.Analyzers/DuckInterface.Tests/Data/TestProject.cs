@@ -10,13 +10,25 @@ namespace DuckInterface.Test.Data
     {
         public static Project Project { get; }
         
+        public static AdhocWorkspace Workspace { get; }
+        
         static TestProject()
         {
-            var workspace = new AdhocWorkspace();
-            Project = workspace
+            Workspace = new AdhocWorkspace();
+            Workspace = Workspace
+                .AddProject("TestProjectLibrary", LanguageNames.CSharp)
+                .WithMetadataReferences(GetReferences())
+                .AddDocument("Library.cs", Library).Project.Solution.Workspace as AdhocWorkspace;
+            
+            var libraryProject = Workspace.CurrentSolution.Projects.First();
+            
+            Workspace = Workspace
                 .AddProject("TestProject", LanguageNames.CSharp)
                 .WithMetadataReferences(GetReferences())
-                .AddDocument("Program.cs", ProgramCS).Project;
+                .WithProjectReferences(new []{new ProjectReference(libraryProject.Id)})
+                .AddDocument("Program.cs", ProgramCS).Project.Solution.Workspace as AdhocWorkspace;
+
+            Project = Workspace.CurrentSolution.Projects.Last();
         }
         
         
@@ -35,8 +47,8 @@ namespace DuckInterface.Test.Data
                 MetadataReference.CreateFromFile(typeof(DuckableAttribute).Assembly.Location),
             };
         }
-        
-        public const string ProgramCS = @"
+
+        public const string Library = @"
 using System;
 
 namespace TestProject 
@@ -52,7 +64,14 @@ namespace TestProject
         void Do(System.Threading.CancellationToken token); 
         byte[] ToArray();
     }
+}
+";
+        
+        public const string ProgramCS = @"
+using System;
 
+namespace TestProject 
+{
     public class BaseCalculator 
     {
         public float ValueGet { get; }
