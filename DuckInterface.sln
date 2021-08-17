@@ -16,7 +16,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{F5
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface.Core", "DuckInterface.Core\DuckInterface.Core.csproj", "{F141A5FF-677C-4AB8-9CC2-FEC566620A10}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuckInterface", "DuckInterface\DuckInterface.csproj", "{CDFC2E91-AC32-4386-AA9A-4CC052CE6EFA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface", "DuckInterface\DuckInterface.csproj", "{CDFC2E91-AC32-4386-AA9A-4CC052CE6EFA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{86CEFB07-B90C-4C13-8C44-687BBFEB7C6A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Package", "Package", "{61F54B85-C915-4B47-93D4-1D6712071A19}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Projects", "Projects", "{17BBD242-C795-4DAD-B1F5-530B2E7D673C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject", "TestProjects\TestProject\TestProject.csproj", "{020A4022-A1A8-49BB-9D47-30281627EA25}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,9 +52,19 @@ Global
 		{CDFC2E91-AC32-4386-AA9A-4CC052CE6EFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CDFC2E91-AC32-4386-AA9A-4CC052CE6EFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CDFC2E91-AC32-4386-AA9A-4CC052CE6EFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{020A4022-A1A8-49BB-9D47-30281627EA25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{020A4022-A1A8-49BB-9D47-30281627EA25}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{020A4022-A1A8-49BB-9D47-30281627EA25}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{020A4022-A1A8-49BB-9D47-30281627EA25}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E05990D8-4D63-4270-BF08-35FA3EFEBA97} = {86CEFB07-B90C-4C13-8C44-687BBFEB7C6A}
+		{CDFC2E91-AC32-4386-AA9A-4CC052CE6EFA} = {61F54B85-C915-4B47-93D4-1D6712071A19}
+		{17BBD242-C795-4DAD-B1F5-530B2E7D673C} = {86CEFB07-B90C-4C13-8C44-687BBFEB7C6A}
+		{020A4022-A1A8-49BB-9D47-30281627EA25} = {17BBD242-C795-4DAD-B1F5-530B2E7D673C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AE099F06-9B81-4A9E-BC27-C7A1B75E5A9A}

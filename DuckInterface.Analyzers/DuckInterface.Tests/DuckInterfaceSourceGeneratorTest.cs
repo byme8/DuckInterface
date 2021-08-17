@@ -15,9 +15,7 @@ namespace DuckInterface.Test
         {
             var project = TestProject.Project;
 
-            var newProject = await project.ApplyDuckGenerators();
-
-            var compilation = await newProject.GetCompilationAsync();
+            var compilation = await project.GetCompilationAsync();
             var errors = compilation.GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
                 .ToArray();
@@ -33,9 +31,7 @@ namespace DuckInterface.Test
                 "public float Calculate(float a, float b)",
                 "public float CalculateValue(float a, float b)");
 
-            var newProject = await project.ApplyDuckGenerators();
-
-            var compilation = await newProject.GetCompilationAsync();
+            var compilation = await project.GetCompilationAsync();
             var diagnostics = compilation
                 .GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
@@ -54,9 +50,7 @@ namespace DuckInterface.Test
                 "namespace TestProject",
                 "namespace TestProject.SomeNamespace.Test");
 
-            var newProject = await project.ApplyDuckGenerators();
-
-            var compilation = await newProject.GetCompilationAsync();
+            var compilation = await project.GetCompilationAsync();
             var diagnostics = compilation
                 .GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
@@ -73,9 +67,7 @@ namespace DuckInterface.Test
                 "Doit(calculator);",
                 "Doit(new AddCalculator());");
 
-            var newProject = await project.ApplyDuckGenerators();
-
-            var compilation = await newProject.GetCompilationAsync();
+            var compilation = await project.GetCompilationAsync();
             var diagnostics = compilation
                 .GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
@@ -101,9 +93,7 @@ namespace DuckInterface.Test
                         Doit(calculator);
                     }");
 
-            var newProject = await project.ApplyDuckGenerators();
-
-            var compilation = await newProject.GetCompilationAsync();
+            var compilation = await project.GetCompilationAsync();
             var diagnostics = compilation
                 .GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
@@ -130,9 +120,7 @@ namespace DuckInterface.Test
             var updatedProject = toReplace.Aggregate(TestProject.Project,
                 (project, tuple) => project.ReplacePartOfDocumentAsync("Program.cs", tuple.Item1, tuple.Item2).Result);
 
-            var newProject = await updatedProject.ApplyDuckGenerators();
-
-            var compilation = await newProject.GetCompilationAsync();
+            var compilation = await updatedProject.GetCompilationAsync();
             var diagnostics = compilation
                 .GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
@@ -152,9 +140,7 @@ namespace DuckInterface.Test
             var updatedProject = toReplace.Aggregate(TestProject.Project,
                 (project, tuple) => project.ReplacePartOfDocumentAsync("Program.cs", tuple.Item1, tuple.Item2).Result);
 
-            var newProject = await updatedProject.ApplyDuckGenerators();
-
-            var compilation = await newProject.GetCompilationAsync();
+            var compilation = await updatedProject.GetCompilationAsync();
             var diagnostics = compilation
                 .GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
