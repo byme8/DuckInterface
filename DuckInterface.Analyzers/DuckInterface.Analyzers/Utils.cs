@@ -26,7 +26,7 @@ namespace DuckInterface
                 yield return member;
             }
         }
-        
+
         public static ITypeSymbol GetTypeSymbol(this SymbolInfo info)
         {
             switch (info.Symbol)
@@ -41,7 +41,7 @@ namespace DuckInterface
                     return null;
             }
         }
-        
+
         public static IEnumerable<IMethodSymbol> GetPublicMethods(this IEnumerable<ISymbol> members)
         {
             return members
@@ -66,30 +66,33 @@ namespace DuckInterface
 
         private static Dictionary<string, ISymbol> MemberThatCanBeDucked(ITypeSymbol type)
         {
-            return type
+            var properties = type
+                .GetAllMembers()
+                .OfType<IPropertySymbol>()
+                .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
+                .Select(o =>
+                (
+                    Key:
+                    $"{o.Type.ToGlobalName()}_{o.Name}{(o.GetMethod != null ? "_getter" : string.Empty)}{(o.SetMethod != null ? "_setter" : string.Empty)}",
+                    Value: (ISymbol) o
+                ))
+                .ToArray();
+
+            var methods = type
                 .GetAllMembers()
                 .GetPublicMethods()
                 .Select(o =>
                 (
                     Key:
-                    o.ReturnType.ToGlobalName() +
-                    o.Name +
-                    o.Parameters
-                        .Select(oo => oo.Type.ToGlobalName() + oo.Name)
-                        .Join(),
+                    $"{o.ReturnType.ToGlobalName()}_${o.Name}_{o.Parameters.Select(oo => oo.Type.ToGlobalName() + oo.Name).Join("_")}",
                     Value: (ISymbol) o
                 ))
-                .Concat(type
-                    .GetAllMembers()
-                    .OfType<IPropertySymbol>()
-                    .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
-                    .Select(o =>
-                    (
-                        Key: o.Type.ToGlobalName() + o.Name + (o.GetMethod != null ? "getter" : string.Empty) +
-                             (o.SetMethod != null ? "setter" : string.Empty),
-                        Value: (ISymbol) o
-                    )))
-                .ToDictionary(o => o.Key, o => o.Value);
+                .ToArray();
+
+            return methods
+                .Concat(properties)
+                .GroupBy(o => o.Key)
+                .ToDictionary(o => o.Key, o => o.First().Value);
         }
 
         public static string GetUniqueName(this ITypeSymbol type)
@@ -111,7 +114,7 @@ namespace DuckInterface
         {
             return string.Join(separator, values);
         }
-        
+
         public static string Wrap(this string text, string left = "", string right = "")
         {
             return $"{left}{text}{right}";

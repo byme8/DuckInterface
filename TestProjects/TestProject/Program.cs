@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace TestProject
 {
@@ -54,16 +55,31 @@ namespace TestProject
         public DICalculator Calculator { get; set; }
     }
 
+    [Duckable]
+    public interface IStream
+    {
+        int ReadByte();
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
+            var memoryStream = new MemoryStream();
+            UseStream(memoryStream);
+            
             var calculator = new AddCalculator();
             Doit(calculator); // Main
         }
 
+        public static void UseStream(DIStream stream)
+        {
+            
+        }
+        
         // additional 1
 
+        
         public static float Doit(DICalculator calculator)
         {
             var @interface = DuckToInterface(calculator);
