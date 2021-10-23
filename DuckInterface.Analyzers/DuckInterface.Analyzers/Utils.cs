@@ -9,8 +9,10 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace DuckInterface
 {
-    public static class Units
+    public static class Utils
     {
+        public const string EditorBrowsable = "[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]";
+        
         public static IEnumerable<ISymbol> GetAllMembers(this ITypeSymbol symbol)
         {
             if (symbol.BaseType != null)
@@ -50,7 +52,7 @@ namespace DuckInterface
                 .Where(o => o.MethodKind == MethodKind.Ordinary);
         }
 
-        public static (bool IsDuckable, IEnumerable<ISymbol> MissingSymbols) IsTypeDuckableTo(
+        public static (bool IsDuckable, IEnumerable<ISymbol> MissingSymbols) IsDuckableTo(
             this ITypeSymbol @interface, ITypeSymbol implementation)
         {
             var methodsToDuck = MemberThatCanBeDucked(@interface);
@@ -108,6 +110,11 @@ namespace DuckInterface
         public static string ToGlobalName(this ISymbol symbol)
         {
             return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        public static string ToSafeGlobalName(this ISymbol symbol)
+        {
+            return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "").Replace(".", "_");
         }
 
         public static string Join(this IEnumerable<string> values, string separator = ", ")

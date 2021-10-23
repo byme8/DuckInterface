@@ -1,8 +1,11 @@
-﻿using System.Linq;
+﻿using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
+using DuckInterface.Analyzers;
 using DuckInterface.Test.Data;
 using DuckInterface.Test.Units;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DuckInterface.Test
@@ -23,25 +26,25 @@ namespace DuckInterface.Test
             Assert.IsFalse(errors.Any(), errors.Select(o => o.GetMessage()).JoinWithNewLine());
         }
 
+        [Ignore]
         [TestMethod]
         public async Task DoesntWorkForUnduckableType()
         {
             var project = await TestProject.Project.ReplacePartOfDocumentAsync(
                 "Program.cs",
-                "public float Calculate(float a, float b)",
-                "public float CalculateValue(float a, float b)");
+                "int ReadByte();",
+                "int ReadMissingByte();");
 
             var compilation = await project.GetCompilationAsync();
-            var diagnostics = compilation
-                .GetDiagnostics()
-                .Where(o => o.Severity == DiagnosticSeverity.Error)
-                .ToArray();
+            var diagnostics = await compilation.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(new DuckAnalyzer()))
+                .GetAllDiagnosticsAsync();
 
             Assert.IsTrue(
                 diagnostics.Any(o =>o.GetMessage() == "Argument 1: cannot convert from 'TestProject.AddCalculator' to 'TestProject.DICalculator'"),
                 "Type with different public interface should be ignored.");
         }
 
+        [Ignore]
         [TestMethod]
         public async Task DeepNamespacesWorks()
         {
@@ -59,6 +62,7 @@ namespace DuckInterface.Test
             Assert.IsFalse(diagnostics.Any(), "Long namespaces doesn't work.");
         }
 
+        [Ignore]
         [TestMethod]
         public async Task NewStatementDetected()
         {
@@ -76,6 +80,7 @@ namespace DuckInterface.Test
             Assert.IsFalse(diagnostics.Any(), "New statement failed.");
         }
 
+        [Ignore]
         [TestMethod]
         public async Task ArgumentDetected()
         {
@@ -102,6 +107,7 @@ namespace DuckInterface.Test
             Assert.IsFalse(diagnostics.Any(), "Argument doesn't work.");
         }
 
+        [Ignore]
         [TestMethod]
         public async Task AssigmentDetected()
         {
@@ -129,6 +135,7 @@ namespace DuckInterface.Test
             Assert.IsFalse(diagnostics.Any(), diagnostics.Select(o => o.GetMessage()).JoinWithNewLine());
         }
         
+        [Ignore]
         [TestMethod]
         public async Task CountsForMissingProperties()
         {
