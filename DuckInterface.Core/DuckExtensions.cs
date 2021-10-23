@@ -2,6 +2,11 @@
 
 namespace DuckInterface
 {
+    public interface IDuckErrorsProvider
+    {
+        string[] Errors { get; }
+    }
+
     public static class DuckExtensions
     {
         public static TInterface Duck<TInterface>(this object instance)

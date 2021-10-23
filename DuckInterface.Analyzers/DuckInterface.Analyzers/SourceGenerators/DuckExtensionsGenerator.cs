@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
+using DuckInterface.Analyzers.SourceGenerators.BaseClassGeneration;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -27,58 +27,90 @@ namespace DuckInterface.Analyzers
                 .OfType<IMethodSymbol>()
                 .First(o => o.Name == "Duck");
 
+            var duckFromMethod = context.Compilation
+                .GetTypeByMetadataName("DuckInterface.Duck")
+                .GetAllMembers()
+                .OfType<IMethodSymbol>()
+                .First(o => o.Name == "From");
+
             var errors = new List<string>();
-            foreach (var member in members)
+
+            var ducks = members.Select(o =>
+            {
+                var semanticModel = context.Compilation.GetSemanticModel(o.SyntaxTree);
+                var interfaceSymbol = semanticModel.GetSymbolInfo(o.Name);
+
+                if (interfaceSymbol.Symbol is IMethodSymbol method)
+                {
+                    if (SymbolEqualityComparer.Default.Equals(method.ReducedFrom, duckExtensions))
+                    {
+                        var duckInterface = method.TypeArguments.First();
+                        var typeToDuck = GetTypeToDuck(o, semanticModel);
+
+                        var (isDuckable, missingSymbols) = duckInterface.IsDuckableTo(typeToDuck);
+                        if (!isDuckable)
+                        {
+                            var diagnostic = Diagnostic
+                                .Create(
+                                    DuckDiagnostics.DuckMappingCantBeDone,
+                                    o.GetLocation(),
+                                    duckInterface.Name,
+                                    typeToDuck.Name,
+                                    missingSymbols.Select(o => o.Name).Join());
+
+                            errors.Add(diagnostic.GetMessage());
+                            context.ReportDiagnostic(diagnostic);
+
+                            return (null, null);
+                        }
+
+                        return (Interface: duckInterface, Implementation: typeToDuck);
+                    }
+
+                    if (SymbolEqualityComparer.Default.Equals(method.ConstructedFrom, duckFromMethod))
+                    {
+                        var duckInterface = method.TypeArguments.First();
+                        return (Interface: duckInterface, Implementation: null);
+                    }
+                }
+
+                return (null, null);
+            });
+
+            foreach (var duck in ducks.Where(o => o.Interface is not null))
             {
                 if (context.CancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
-                
-                var semanticModel = context.Compilation.GetSemanticModel(member.SyntaxTree);
-                var interfaceSymbol = semanticModel.GetSymbolInfo(member.Name);
 
-                if (interfaceSymbol.Symbol is not IMethodSymbol method ||
-                    !SymbolEqualityComparer.Default.Equals(method.ReducedFrom, duckExtensions))
+                BaseClassGenerator.Generate(context, duck.Interface);
+                if (duck.Implementation is not null)
                 {
-                    continue;
+                    CreateDuckImplementation(context, duck.Interface, duck.Implementation);
+                    CreateDuckExtensions(context, duck.Interface, duck.Implementation);
                 }
-
-                var duckInterface = method.TypeArguments.First();
-                var typeToDuck = GetTypeToDuck(member, semanticModel);
-
-                var (isDuckable, missingSymbols) = duckInterface.IsDuckableTo(typeToDuck);
-                if (!isDuckable)
-                {
-                    var diagnostic = Diagnostic
-                        .Create(
-                            DuckDiagnostics.DuckMappingCantBeDone,
-                            member.GetLocation(),
-                            duckInterface.Name,
-                            typeToDuck.Name,
-                            missingSymbols.Select(o => o.Name).Join());
-
-                    errors.Add(diagnostic.GetMessage());
-                    context.ReportDiagnostic(diagnostic);
-
-                    continue;
-                }
-
-                CreateDuckClass(context, duckInterface);
-                CreateDuckImplementation(context, duckInterface, typeToDuck);
-                CreateDuckExtensions(context, duckInterface, typeToDuck);
             }
 
             if (errors.Any())
             {
-                context.AddSource("DuckErrors", errors.Select(o => "// " + o).JoinWithNewLine());
+                context.AddSource("DuckErrors", @$"
+namespace DuckInterface.Generated
+{{
+    {Utils.EditorBrowsable}
+    public class DuckErrors : DuckInterface.IDuckErrorsProvider
+    {{
+        public string[] Errors {{ get; }} = new string[] {{ {errors.Select(o => $"\"{o}\"").Join()} }};
+    }} 
+}}");
+
             }
         }
 
         private void CreateDuckExtensions(GeneratorExecutionContext context, ITypeSymbol duckInterface, ITypeSymbol typeToDuck)
         {
             var duckExtensionClassName = $"Duck_{duckInterface.ToSafeGlobalName()}_{typeToDuck.ToSafeGlobalName()}_Extensions";
-            var duckImplementationClassName = GetDuckImplementationClassName(duckInterface);
+            var duckImplementationClassName = Utils.GetDuckImplementationClassName(duckInterface);
             var source =
                 @$"using System;
 
@@ -112,7 +144,7 @@ namespace DuckInterface.Generated.{(duckInterface.ContainingNamespace.ToDisplayS
         private void CreateDuckImplementation(GeneratorExecutionContext context, ITypeSymbol duckInterface, ITypeSymbol typeToDuck)
         {
             var fileName = $"Duck_{duckInterface.ToSafeGlobalName()}_{typeToDuck.ToSafeGlobalName()}";
-            var duckClassName = GetDuckImplementationClassName(duckInterface);
+            var duckClassName = Utils.GetDuckImplementationClassName(duckInterface);
 
 
             var properties = duckInterface
@@ -160,127 +192,6 @@ namespace DuckInterface.Generated.{(duckInterface.ContainingNamespace.ToDisplayS
             }
 
             context.AddSource(fileName, source.ToSourceText());
-        }
-
-        private static string GetDuckImplementationClassName(ITypeSymbol duckInterface)
-        {
-            return $"Duck_{duckInterface.ToSafeGlobalName()}";
-        }
-
-        private void CreateDuckClass(GeneratorExecutionContext context, ITypeSymbol duckInterface)
-        {
-            var duckImplementationClassName = GetDuckImplementationClassName(duckInterface);
-            var fields = CreateSourceForFields(context, duckInterface);
-
-            var fullMethods = duckInterface
-                .GetAllMembers()
-                .GetPublicMethods()
-                .Select(method =>
-                {
-                    var returnType = method.ReturnType;
-                    if (returnType.IsRefLikeType)
-                    {
-                        return "";
-                    }
-
-                    var parameters = method.Parameters;
-                    if (parameters.Any(o => o.Type.IsRefLikeType))
-                    {
-                        return "";
-                    }
-
-                    return
-                        $@"
-        [System.Diagnostics.DebuggerStepThrough]
-        public {returnType.ToGlobalName()} {method.Name}({parameters.Select(o => $"{o.Type.ToGlobalName()} {o.Name}").Join()})
-        {{
-            {(returnType.SpecialType == SpecialType.System_Void ? "" : "return ")}_{method.Name}({parameters.Select(o => o.Name).Join()});
-        }}
-";
-                });
-
-            var properties = duckInterface
-                .GetAllMembers()
-                .OfType<IPropertySymbol>()
-                .Select(property => $@"
-        public {property.Type.ToGlobalName()} {property.Name}
-        {{
-            {(property.GetMethod != null ? $" [System.Diagnostics.DebuggerStepThrough] get {{ return _{property.Name}Getter(); }}" : string.Empty)}
-            {(property.SetMethod != null ? $" [System.Diagnostics.DebuggerStepThrough] set {{ _{property.Name}Setter(value); }}" : string.Empty)}
-        }}
-");
-
-            var source = $@"
-using System;
-
-namespace DuckInterface.Generated.{duckInterface.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces))} 
-{{
-    {Utils.EditorBrowsable}
-    public partial class {duckImplementationClassName}: {duckInterface.ToGlobalName()} 
-    {{
-{fields.JoinWithNewLine()}        
-{properties.JoinWithNewLine()}
-{fullMethods.JoinWithNewLine()}        
-    }}
-}}
-";
-            context.AddSource(duckImplementationClassName, source.ToSourceText());
-        }
-
-        private IEnumerable<string> CreateSourceForFields(
-            GeneratorExecutionContext context,
-            ITypeSymbol duckedType)
-        {
-            var methods = duckedType
-                .GetAllMembers()
-                .GetPublicMethods()
-                .Select(method =>
-                {
-                    var returnType = method.ReturnType;
-                    var arguments = method.Parameters;
-
-                    (string FuncOrAction, string ReturnType) @return =
-                        method.ReturnsVoid
-                            ? ("Action", string.Empty)
-                            : ("Func", returnType.ToGlobalName());
-
-                    (string Left, string Right) wrappers =
-                        arguments.Any() || @return.FuncOrAction == "Func"
-                            ? ("<", ">")
-                            : ("", "");
-
-                    return $@"
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
-        private readonly {@return.FuncOrAction}{arguments
-            .Select(o => o.Type.ToGlobalName())
-            .Concat(new[] { @return.ReturnType })
-            .Where(o => !string.IsNullOrEmpty(o))
-            .Join()
-            .Wrap(wrappers.Left, wrappers.Right)} _{method.Name};";
-                });
-
-            var properties = duckedType
-                .GetAllMembers()
-                .OfType<IPropertySymbol>()
-                .Where(o => o.DeclaredAccessibility == Accessibility.Public)
-                .SelectMany(property =>
-                {
-                    var propertyType = property.Type.ToGlobalName();
-                    var getter = property.GetMethod != null
-                        ? $@"
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
-        private readonly Func<{propertyType}> _{property.Name}Getter;"
-                        : string.Empty;
-
-                    var setter = property.SetMethod != null
-                        ? $@"
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)] 
-        private readonly Action<{propertyType}> _{property.Name}Setter;"
-                        : string.Empty;
-
-                    return new[] { getter, setter };
-                });
-            return properties.Concat(methods);
         }
     }
 }

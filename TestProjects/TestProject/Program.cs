@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using DuckInterface;
 
 namespace TestProject
@@ -18,6 +17,13 @@ namespace TestProject
     public interface IStream
     {
         int ReadByte();
+    }
+    
+    public interface IStreamConfig
+    {
+        bool CanSeek { get; }
+        bool CanRead { get; }
+        bool CanWrite { get; }
     }
 
     class Program

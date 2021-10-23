@@ -10,7 +10,7 @@ namespace DuckInterface.Analyzers
         {
             if (syntaxNode is InvocationExpressionSyntax invocation &&
                 invocation.Expression is MemberAccessExpressionSyntax member &&
-                member.Name.Identifier.ToString() == "Duck")
+                member.Name.Identifier.ToString() is "Duck" or "From")
             {
                 this.MemberAccesses.Add(member);
             }

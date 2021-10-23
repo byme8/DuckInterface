@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace DuckInterface
@@ -12,7 +10,25 @@ namespace DuckInterface
     public static class Utils
     {
         public const string EditorBrowsable = "[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]";
-        
+
+        public static string GetDuckImplementationClassName(ITypeSymbol duckInterface)
+        {
+            return $"Duck_{duckInterface.ToSafeGlobalName()}";
+        }
+
+        public static string LowerFirstChar(this string value)
+        {
+            var stringBuilder = new StringBuilder();
+            stringBuilder.Append(char.ToLower(value.First()));
+            var span = value.AsSpan(1);
+            for (int i = 0; i < span.Length; i++)
+            {
+                stringBuilder.Append(span[i]);
+            }
+
+            return stringBuilder.ToString();
+        }
+
         public static IEnumerable<ISymbol> GetAllMembers(this ITypeSymbol symbol)
         {
             if (symbol.BaseType != null)
@@ -76,7 +92,7 @@ namespace DuckInterface
                 (
                     Key:
                     $"{o.Type.ToGlobalName()}_{o.Name}{(o.GetMethod != null ? "_getter" : string.Empty)}{(o.SetMethod != null ? "_setter" : string.Empty)}",
-                    Value: (ISymbol) o
+                    Value: (ISymbol)o
                 ))
                 .ToArray();
 
@@ -87,7 +103,7 @@ namespace DuckInterface
                 (
                     Key:
                     $"{o.ReturnType.ToGlobalName()}_${o.Name}_{o.Parameters.Select(oo => oo.Type.ToGlobalName() + oo.Name).Join("_")}",
-                    Value: (ISymbol) o
+                    Value: (ISymbol)o
                 ))
                 .ToArray();
 
