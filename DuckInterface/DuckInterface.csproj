@@ -22,18 +22,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DuckInterface.Analyzers\DuckInterface.Analyzers\DuckInterface.Analyzers.csproj" />
-        <ProjectReference Include="..\DuckInterface.Core\DuckInterface.Core.csproj" />
+        <ProjectReference Include="..\DuckInterface.Analyzers\DuckInterface.Analyzers\DuckInterface.Analyzers.csproj"/>
+        <ProjectReference Include="..\DuckInterface.Core\DuckInterface.Core.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
+        <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath=""/>
     </ItemGroup>
 
     <Target Name="_AddAnalyzersToOutput">
         <ItemGroup>
-            <TfmSpecificPackageFile Include="$(OutputPath)\DuckInterface.Analyzers.dll" PackagePath="analyzers/dotnet/cs" />
-            <TfmSpecificPackageFile Include="$(OutputPath)\DuckInterface.Core.dll" PackagePath="lib/netstandard2.0" />
+            <TfmSpecificPackageFile Include="$(OutputPath)\DuckInterface.Analyzers.dll" PackagePath="analyzers/dotnet/cs"/>
+            <TfmSpecificPackageFile Include="$(OutputPath)\DuckInterface.Core.dll" PackagePath="lib/netstandard2.0"/>
         </ItemGroup>
     </Target>
 

@@ -18,7 +18,7 @@ namespace TestProject
     {
         int ReadByte();
     }
-    
+
     public interface IStreamConfig
     {
         bool CanSeek { get; }
@@ -38,7 +38,7 @@ namespace TestProject
         public static void UseStream(IStream stream)
         {
         }
-        
+
         // additional 1
     }
 }

@@ -46,7 +46,7 @@ namespace DuckInterface.Test
             {
                 return Enumerable.Empty<string>().ToArray();
             }
-            
+
             var errorProvider = Activator.CreateInstance(errorProviderType) as IDuckErrorsProvider;
             return errorProvider!.Errors;
         }
@@ -62,14 +62,26 @@ namespace DuckInterface.Test
             var errors = await CompileAndExtractErrors(project);
             Assert.IsFalse(errors.Any(), "Long namespaces doesn't work.");
         }
-        
+
         [TestMethod]
         public async Task DuckFromWorks()
         {
             var project = await TestProject.Project.ReplacePartOfDocumentAsync(
                 "Program.cs",
                 "// main",
-                "Duck.From<IStreamConfig>().Create(() => true, () => true, () => true);");
+                "Duck.From<IStreamConfig>().Make(() => true, () => true, () => true);");
+
+            var errors = await CompileAndExtractErrors(project);
+            Assert.IsFalse(errors.Any(), "Long namespaces doesn't work.");
+        }
+
+        [TestMethod]
+        public async Task PartialDuckFromWorks()
+        {
+            var project = await TestProject.Project.ReplacePartOfDocumentAsync(
+                "Program.cs",
+                "// main",
+                "Duck.From<IStreamConfig>().MakePartial(() => true);");
 
             var errors = await CompileAndExtractErrors(project);
             Assert.IsFalse(errors.Any(), "Long namespaces doesn't work.");

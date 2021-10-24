@@ -18,7 +18,7 @@ namespace DuckInterface.Test.Utils
                 .WithText(SourceText.From(text.ToString().Replace(textToReplace, newText)))
                 .Project;
         }
-        
+
         public static async Task<Assembly> CompileToRealAssembly(this Project project)
         {
             var compilation = await project.GetCompilationAsync();
@@ -26,7 +26,7 @@ namespace DuckInterface.Test.Utils
 
             var error = compilation.GetDiagnostics().Concat(analyzerResults)
                 .FirstOrDefault(o => o.Severity == DiagnosticSeverity.Error);
-            
+
             if (error != null)
             {
                 throw new Exception(error.GetMessage());

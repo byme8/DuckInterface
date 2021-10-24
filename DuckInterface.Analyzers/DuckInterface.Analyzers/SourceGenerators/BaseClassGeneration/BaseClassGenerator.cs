@@ -8,19 +8,29 @@ namespace DuckInterface.Analyzers.SourceGenerators.BaseClassGeneration
     {
         public static void Generate(GeneratorExecutionContext context, ITypeSymbol duckInterface)
         {
+            var @namespace =
+                $"DuckInterface.Generated.{duckInterface.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces))}";
+            var duckInterfaceGlobalName = duckInterface.ToGlobalName();
+
             var duckImplementationClassName = Utils.GetDuckImplementationClassName(duckInterface);
             var arguments = CreateConstructorArguments(duckInterface).ToArray();
-            var mergedArguments = arguments
+            var formatted = arguments
+                .SelectMany(FormatMakeArguments)
+                .ToArray();
+
+            var mergedArguments = formatted
                 .Select(o => $"{o.Type} {o.Name}")
                 .Join();
-            
-            var body = CreateConstructorBody(duckInterface);
+
+            var optionalArguments = formatted
+                .Select(o => $"{o.Type} {o.Name} = default")
+                .Join();
+
+            var createExtensions = CreateExtensions();
+            var constructorBody = CreateConstructorBody(duckInterface);
             var fields = CreateSourceForFields(duckInterface);
             var fullMethods = CreateSourceForMethods(duckInterface);
             var properties = CreateSourceForProperties(duckInterface);
-
-            var @namespace =
-                $"DuckInterface.Generated.{duckInterface.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces))}";
 
             var source = $@"using System;
 using DuckInterface.Core;
@@ -29,9 +39,16 @@ namespace DuckInterface
 {{
     public static class DuckHandlerExtensionsFor{duckInterface.ToSafeGlobalName()}
     {{
-        public static {duckInterface.ToGlobalName()} Create(this IDuckHandler<{duckInterface.ToGlobalName()}> handler, {mergedArguments})
+{createExtensions}
+
+        public static {duckInterfaceGlobalName} Make(this IDuckHandler<{duckInterfaceGlobalName}> handler, {mergedArguments})
         {{
-            return new {@namespace}.{duckImplementationClassName}({arguments.Select(o => o.Name).Join()});
+            return new {@namespace}.{duckImplementationClassName}({formatted.Select(o => o.Name).Join()});
+        }}
+
+        public static {duckInterfaceGlobalName} MakePartial(this IDuckHandler<{duckInterfaceGlobalName}> handler, {optionalArguments})
+        {{
+            return new {@namespace}.{duckImplementationClassName}({formatted.Select(o => o.Name).Join()});
         }}
     }}
 }}
@@ -39,11 +56,11 @@ namespace DuckInterface
 namespace {@namespace} 
 {{
     {Utils.EditorBrowsable}
-    public partial class {duckImplementationClassName}: {duckInterface.ToGlobalName()} 
+    public partial class {duckImplementationClassName}: {duckInterfaceGlobalName} 
     {{
         public {duckImplementationClassName}({mergedArguments})
         {{
-            {body.JoinWithNewLine(";")};
+            {constructorBody.JoinWithNewLine(";")};
         }}
 {fields.JoinWithNewLine()}        
 {properties.JoinWithNewLine()}
@@ -52,31 +69,15 @@ namespace {@namespace}
 }}
 ";
             context.AddSource(duckImplementationClassName, source.ToSourceText());
-        }
 
-        private static IEnumerable<(string Type, string Name)> CreateConstructorArguments(ITypeSymbol symbol)
-        {
-            return symbol.GetAllMembers()
-                .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
-                .SelectMany(CreateArgumentsIterator)
-                .ToArray();
-
-            IEnumerable<(string Type, string Name)> CreateArgumentsIterator(ISymbol symbol)
+            IEnumerable<(string Type, string Name)> FormatCreateArguments(ISymbol symbol)
             {
                 switch (symbol)
                 {
                     case IPropertySymbol property:
                     {
                         var name = property.Name.LowerFirstChar();
-                        if (property.GetMethod is not null)
-                        {
-                            yield return ($"Func<{property.Type.ToGlobalName()}>", $"{name}Getter");
-                        }
-
-                        if (property.SetMethod is not null)
-                        {
-                            yield return ($"Action<{property.Type.ToGlobalName()}>", $"{name}Setter");
-                        }
+                        yield return (property.Type.ToGlobalName(), name);
 
                         break;
                     }
@@ -95,6 +96,127 @@ namespace {@namespace}
 
                         break;
                     }
+                }
+            }
+
+            IEnumerable<string> FormatCreateConstructorArguments(ISymbol symbol)
+            {
+                switch (symbol)
+                {
+                    case IPropertySymbol property:
+                    {
+                        var name = property.Name.LowerFirstChar();
+                        if (property.GetMethod is not null)
+                        {
+                            yield return $"() => {name}";
+                        }
+
+                        if (property.SetMethod is not null)
+                        {
+                            yield return $"o => {name} = o";
+                        }
+
+                        break;
+                    }
+                    case IMethodSymbol { MethodKind: MethodKind.Ordinary } method:
+                    {
+                        var name = method.Name.LowerFirstChar();
+                        yield return name;
+                        break;
+                    }
+                }
+            }
+
+            string CreateExtensions()
+            {
+                var createMergeArguments = arguments
+                    .SelectMany(FormatCreateArguments)
+                    .Select(o => $"{o.Type} {o.Name}")
+                    .Join();
+
+                var optionalCreateMergeArguments = arguments
+                    .SelectMany(FormatCreateArguments)
+                    .Select(o => $"{o.Type} {o.Name} = default")
+                    .Join();
+
+                var createMergedConstructorArguments = arguments
+                    .SelectMany(FormatCreateConstructorArguments)
+                    .Join();
+
+                return
+                    @$"
+        public static {duckInterfaceGlobalName} Create(this IDuckHandler<{duckInterfaceGlobalName}> handler, {createMergeArguments})
+        {{
+            return new {@namespace}.{duckImplementationClassName}({createMergedConstructorArguments});
+        }}
+
+        public static {duckInterfaceGlobalName} CreatePartial(this IDuckHandler<{duckInterfaceGlobalName}> handler, {optionalCreateMergeArguments})
+        {{
+            return new {@namespace}.{duckImplementationClassName}({createMergedConstructorArguments});
+        }}
+";
+
+            }
+        }
+
+        private static IEnumerable<ISymbol> CreateConstructorArguments(ITypeSymbol type)
+        {
+            return type.GetAllMembers()
+                .Where(o => o.DeclaredAccessibility.HasFlag(Accessibility.Public))
+                .SelectMany(CreateArgumentsIterator)
+                .ToArray();
+
+            IEnumerable<ISymbol> CreateArgumentsIterator(ISymbol symbol)
+            {
+                switch (symbol)
+                {
+                    case IPropertySymbol property:
+                    {
+                        yield return property;
+                        break;
+                    }
+                    case IMethodSymbol { MethodKind: MethodKind.Ordinary } method:
+                    {
+                        yield return method;
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<(string Type, string Name)> FormatMakeArguments(ISymbol symbol)
+        {
+            switch (symbol)
+            {
+                case IPropertySymbol property:
+                {
+                    var name = property.Name.LowerFirstChar();
+                    if (property.GetMethod is not null)
+                    {
+                        yield return ($"Func<{property.Type.ToGlobalName()}>", $"{name}Getter");
+                    }
+
+                    if (property.SetMethod is not null)
+                    {
+                        yield return ($"Action<{property.Type.ToGlobalName()}>", $"{name}Setter");
+                    }
+
+                    break;
+                }
+                case IMethodSymbol { MethodKind: MethodKind.Ordinary } method:
+                {
+                    var name = method.Name.LowerFirstChar();
+                    if (method.ReturnsVoid)
+                    {
+                        yield return ($"Action<{method.Parameters.Select(o => o.Type.ToGlobalName()).Join()}>", $"{name}");
+                    }
+                    else
+                    {
+                        var types = new[] { method.ReturnType.ToGlobalName() }.Concat(method.Parameters.Select(o => o.Type.ToGlobalName()));
+                        yield return ($"Func<{types.Join()}>", $"{name}");
+                    }
+
+                    break;
                 }
             }
         }
@@ -127,7 +249,12 @@ namespace {@namespace}
 
                         break;
                     }
-                    case IMethodSymbol { MethodKind: MethodKind.Ordinary } method:
+                    case IMethodSymbol
+                        {
+                            MethodKind:
+                            MethodKind.Ordinary
+                        }
+                        method:
                     {
                         var name = method.Name.LowerFirstChar();
                         yield return $"_{method.Name} = {name}";
@@ -135,6 +262,7 @@ namespace {@namespace}
                     }
                 }
             }
+
         }
 
         private static IEnumerable<string> CreateSourceForProperties(ITypeSymbol duckInterface)

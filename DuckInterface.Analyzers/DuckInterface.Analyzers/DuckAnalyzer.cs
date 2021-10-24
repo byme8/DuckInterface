@@ -9,7 +9,7 @@ namespace DuckInterface.Analyzers
     {
         public override void Initialize(AnalysisContext context)
         {
-            
+
         }
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; }
