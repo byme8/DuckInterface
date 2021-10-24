@@ -77,18 +77,27 @@ namespace DuckInterface.Analyzers
                 return (null, null);
             });
 
+ #pragma warning disable RS1024
+            var processed = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+ #pragma warning restore RS1024
             foreach (var duck in ducks.Where(o => o.Interface is not null))
             {
                 if (context.CancellationToken.IsCancellationRequested)
                 {
                     return;
                 }
-
-                BaseClassGenerator.Generate(context, duck.Interface);
-                if (duck.Implementation is not null)
+                
+                if (!processed.Contains(duck.Interface))
+                {
+                    BaseClassGenerator.Generate(context, duck.Interface);
+                    processed.Add(duck.Interface);
+                }
+                
+                if (duck.Implementation is not null && processed.Contains(duck.Implementation))
                 {
                     CreateDuckImplementation(context, duck.Interface, duck.Implementation);
                     CreateDuckExtensions(context, duck.Interface, duck.Implementation);
+                    processed.Add(duck.Implementation);
                 }
             }
 
