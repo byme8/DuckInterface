@@ -28,15 +28,15 @@ namespace TestProject
 
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             // main
-            var stream = new MemoryStream();
-            UseStream(stream.Duck<IStream>());
         }
 
-        public static void UseStream(IStream stream)
+        public static IStream GetStream()
         {
+            var stream = new MemoryStream();
+            return stream.Duck<IStream>();
         }
 
         // additional 1

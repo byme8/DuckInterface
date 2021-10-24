@@ -71,8 +71,12 @@ namespace DuckInterface.Test
                 "// main",
                 "Duck.From<IStreamConfig>().Make(() => true, () => true, () => true);");
 
-            var errors = await CompileAndExtractErrors(project);
-            Assert.IsFalse(errors.Any(), "Long namespaces doesn't work.");
+            var assembly = await project.CompileToRealAssembly();
+            var method = assembly
+                .GetType("TestProject.Program")
+                .GetMethod("Main");
+
+            method.Invoke(null, new string[] { null });
         }
 
         [TestMethod]
@@ -84,7 +88,22 @@ namespace DuckInterface.Test
                 "Duck.From<IStreamConfig>().MakePartial(() => true);");
 
             var errors = await CompileAndExtractErrors(project);
-            Assert.IsFalse(errors.Any(), "Long namespaces doesn't work.");
+            Assert.IsFalse(errors.Any());
+        }
+
+        [TestMethod]
+        public async Task DuckWorks()
+        {
+            var project = TestProject.Project;
+
+            var assembly = await project.CompileToRealAssembly();
+            var method = assembly
+                .GetType("TestProject.Program")
+                .GetMethod("GetStream");
+
+            var stream = method.Invoke(null, null);
+
+            Assert.IsNotNull(stream);
         }
     }
 }

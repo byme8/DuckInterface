@@ -77,9 +77,7 @@ namespace DuckInterface.Analyzers
                 return (null, null);
             });
 
- #pragma warning disable RS1024
             var processed = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
- #pragma warning restore RS1024
             foreach (var duck in ducks.Where(o => o.Interface is not null))
             {
                 if (context.CancellationToken.IsCancellationRequested)
@@ -93,7 +91,7 @@ namespace DuckInterface.Analyzers
                     processed.Add(duck.Interface);
                 }
                 
-                if (duck.Implementation is not null && processed.Contains(duck.Implementation))
+                if (duck.Implementation is not null && !processed.Contains(duck.Implementation))
                 {
                     CreateDuckImplementation(context, duck.Interface, duck.Implementation);
                     CreateDuckExtensions(context, duck.Interface, duck.Implementation);
@@ -122,8 +120,9 @@ namespace DuckInterface.Generated
             var duckImplementationClassName = Utils.GetDuckImplementationClassName(duckInterface);
             var source =
                 @$"using System;
+using DuckInterface.Generated.{(duckInterface.ContainingNamespace.ToDisplayString())};
 
-namespace DuckInterface.Generated.{(duckInterface.ContainingNamespace.ToDisplayString())} 
+namespace DuckInterface
 {{
     public static class {duckExtensionClassName}
     {{
