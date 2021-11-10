@@ -12,10 +12,15 @@ namespace DuckInterface.Test.Utils
     {
         public static async Task<Project> ReplacePartOfDocumentAsync(this Project project, string documentName, string textToReplace, string newText)
         {
+            return await project.ReplacePartsOfDocumentAsync(documentName, (textToReplace, newText));
+        }
+        
+        public static async Task<Project> ReplacePartsOfDocumentAsync(this Project project, string documentName, params (string TextToReplace, string NewText)[] placesToReplace)
+        {
             var document = project.Documents.First(o => o.Name == documentName);
             var text = await document.GetTextAsync();
-            return document
-                .WithText(SourceText.From(text.ToString().Replace(textToReplace, newText)))
+            return placesToReplace
+                .Aggregate(document, (acc, o) => acc.WithText(SourceText.From(text.ToString().Replace(o.TextToReplace, o.NewText))))
                 .Project;
         }
 

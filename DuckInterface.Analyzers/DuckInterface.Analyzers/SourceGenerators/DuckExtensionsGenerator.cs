@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using DuckInterface.Analyzers.SourceGenerators.BaseClassGeneration;
 using Microsoft.CodeAnalysis;
@@ -35,73 +36,83 @@ namespace DuckInterface.Analyzers
 
             var errors = new List<string>();
 
-            var ducks = members.Select(o =>
+            try
             {
-                var semanticModel = context.Compilation.GetSemanticModel(o.SyntaxTree);
-                var interfaceSymbol = semanticModel.GetSymbolInfo(o.Name);
-
-                if (interfaceSymbol.Symbol is IMethodSymbol method)
-                {
-                    if (SymbolEqualityComparer.Default.Equals(method.ReducedFrom, duckExtensions))
+                var ducks = members
+                    .Select(o =>
                     {
-                        var duckInterface = method.TypeArguments.First();
-                        var typeToDuck = GetTypeToDuck(o, semanticModel);
+                        var semanticModel = context.Compilation.GetSemanticModel(o.SyntaxTree);
+                        var interfaceSymbol = semanticModel.GetSymbolInfo(o.Name);
 
-                        var (isDuckable, missingSymbols) = duckInterface.IsDuckableTo(typeToDuck);
-                        if (!isDuckable)
+                        if (interfaceSymbol.Symbol is IMethodSymbol method)
                         {
-                            var diagnostic = Diagnostic
-                                .Create(
-                                    DuckDiagnostics.DuckMappingCantBeDone,
-                                    o.GetLocation(),
-                                    duckInterface.Name,
-                                    typeToDuck.Name,
-                                    missingSymbols.Select(o => o.Name).Join());
+                            if (SymbolEqualityComparer.Default.Equals(method.ReducedFrom, duckExtensions))
+                            {
+                                var duckInterface = method.TypeArguments.First();
+                                var typeToDuck = GetTypeToDuck(o, semanticModel);
 
-                            errors.Add(diagnostic.GetMessage());
-                            context.ReportDiagnostic(diagnostic);
+                                var (isDuckable, missingSymbols) = duckInterface.IsDuckableTo(typeToDuck);
+                                if (!isDuckable)
+                                {
+                                    var diagnostic = Diagnostic
+                                        .Create(
+                                            DuckDiagnostics.DuckMappingCantBeDone,
+                                            o.GetLocation(),
+                                            duckInterface.Name,
+                                            typeToDuck.Name,
+                                            missingSymbols.Select(o => o.Name).Join());
 
-                            return (null, null);
+                                    errors.Add(diagnostic.GetMessage());
+                                    context.ReportDiagnostic(diagnostic);
+
+                                    return (null, null);
+                                }
+
+                                return (Interface: duckInterface, Implementation: typeToDuck);
+                            }
+
+                            if (SymbolEqualityComparer.Default.Equals(method.ConstructedFrom, duckFromMethod))
+                            {
+                                var duckInterface = method.TypeArguments.First();
+                                return (Interface: duckInterface, Implementation: null);
+                            }
                         }
 
-                        return (Interface: duckInterface, Implementation: typeToDuck);
-                    }
+                        return (null, null);
+                    });
 
-                    if (SymbolEqualityComparer.Default.Equals(method.ConstructedFrom, duckFromMethod))
+                var processed = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+                foreach (var duck in ducks.Where(o => o.Interface is not null))
+                {
+                    if (context.CancellationToken.IsCancellationRequested)
                     {
-                        var duckInterface = method.TypeArguments.First();
-                        return (Interface: duckInterface, Implementation: null);
+                        return;
+                    }
+
+                    if (!processed.Contains(duck.Interface))
+                    {
+                        BaseClassGenerator.Generate(context, duck.Interface);
+                        processed.Add(duck.Interface);
+                    }
+
+                    if (duck.Implementation is not null && !processed.Contains(duck.Implementation))
+                    {
+                        CreateDuckImplementation(context, duck.Interface, duck.Implementation);
+                        CreateDuckExtensions(context, duck.Interface, duck.Implementation);
+                        processed.Add(duck.Implementation);
                     }
                 }
 
-                return (null, null);
-            });
-
-            var processed = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
-            foreach (var duck in ducks.Where(o => o.Interface is not null))
-            {
-                if (context.CancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-                
-                if (!processed.Contains(duck.Interface))
-                {
-                    BaseClassGenerator.Generate(context, duck.Interface);
-                    processed.Add(duck.Interface);
-                }
-                
-                if (duck.Implementation is not null && !processed.Contains(duck.Implementation))
-                {
-                    CreateDuckImplementation(context, duck.Interface, duck.Implementation);
-                    CreateDuckExtensions(context, duck.Interface, duck.Implementation);
-                    processed.Add(duck.Implementation);
-                }
             }
-
-            if (errors.Any())
+            catch (Exception e)
             {
-                context.AddSource("DuckErrors", @$"
+                errors.Add(e.Message);
+            }
+            finally
+            {
+                if (errors.Any())
+                {
+                    context.AddSource("DuckErrors", @$"
 namespace DuckInterface.Generated
 {{
     {Utils.EditorBrowsable}
@@ -110,7 +121,7 @@ namespace DuckInterface.Generated
         public string[] Errors {{ get; }} = new string[] {{ {errors.Select(o => $"\"{o}\"").Join()} }};
     }} 
 }}");
-
+                }
             }
         }
 

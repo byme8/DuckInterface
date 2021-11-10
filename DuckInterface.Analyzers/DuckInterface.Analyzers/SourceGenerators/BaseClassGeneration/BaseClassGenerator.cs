@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace DuckInterface.Analyzers.SourceGenerators.BaseClassGeneration
@@ -8,8 +9,15 @@ namespace DuckInterface.Analyzers.SourceGenerators.BaseClassGeneration
     {
         public static void Generate(GeneratorExecutionContext context, ITypeSymbol duckInterface)
         {
-            var @namespace =
-                $"DuckInterface.Generated.{duckInterface.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces))}";
+            var containingNamespace = duckInterface.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
+            var @namespace = new StringBuilder();
+            @namespace.Append("DuckInterface.Generated");
+            if (!string.IsNullOrEmpty(containingNamespace))
+            {
+                @namespace.Append(".");
+                @namespace.Append(containingNamespace);
+            }
+            
             var duckInterfaceGlobalName = duckInterface.ToGlobalName();
 
             var duckImplementationClassName = Utils.GetDuckImplementationClassName(duckInterface);

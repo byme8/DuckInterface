@@ -80,6 +80,22 @@ namespace DuckInterface.Test
         }
 
         [TestMethod]
+        public async Task GenericsDuckWorks()
+        {
+            var project = await TestProject.Project.ReplacePartsOfDocumentAsync(
+                "Program.cs",
+                ("// namespaces", "using System.Collections;"),
+                ("// main", "Duck.From<IList<int>>()"));
+
+            var assembly = await project.CompileToRealAssembly();
+            var method = assembly
+                .GetType("TestProject.Program")
+                .GetMethod("Main");
+
+            method.Invoke(null, new string[] { null });
+        }
+
+        [TestMethod]
         public async Task PartialDuckFromWorks()
         {
             var project = await TestProject.Project.ReplacePartOfDocumentAsync(
