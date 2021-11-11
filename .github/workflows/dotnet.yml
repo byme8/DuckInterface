@@ -2,7 +2,6 @@ name: .NET
 
 on:
   push:
-    branches: [ main ]
     tags:        
      - v*   
 
@@ -24,7 +23,7 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal
     - name: Push
-      run: 
-        cd ./DuckInterface
-        dotnet pack --no-build --verbosity normal -o ./nugets
-        dotnet push ./nugets/*.nupkg --no-build --skip-duplicate --verbosity normal -k ${{ secrets.API_KEY }} 
+      run: |
+        - cd ./DuckInterface
+        - dotnet pack --no-build --verbosity normal -o ./nugets
+        - dotnet push ./nugets/*.nupkg --no-build --skip-duplicate --verbosity normal -k ${{ secrets.API_KEY }} 
