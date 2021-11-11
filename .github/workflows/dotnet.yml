@@ -26,4 +26,5 @@ jobs:
       run: |
         cd ./DuckInterface
         dotnet pack --no-build --verbosity normal -o ./nugets
-        dotnet push ./nugets/*.nupkg --no-build --skip-duplicate --verbosity normal -k ${{ secrets.API_KEY }} 
+        cd ./nugets
+        dotnet nuget push *.nupkg --skip-duplicate -s https://nuget.org -k ${{ secrets.API_KEY }} 

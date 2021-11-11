@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{F52B3E38-B86F-4F2E-A0E7-34E12D4CF7EE}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DuckInterface.Core", "DuckInterface.Core\DuckInterface.Core.csproj", "{F141A5FF-677C-4AB8-9CC2-FEC566620A10}"
