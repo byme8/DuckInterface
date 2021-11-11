@@ -79,7 +79,7 @@ namespace DuckInterface.Test
             method.Invoke(null, new string[] { null });
         }
 
-        [TestMethod]
+        // [TestMethod]
         public async Task GenericsDuckWorks()
         {
             var project = await TestProject.Project.ReplacePartsOfDocumentAsync(
