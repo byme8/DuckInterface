@@ -130,7 +130,11 @@ namespace DuckInterface
 
         public static string ToSafeGlobalName(this ISymbol symbol)
         {
-            return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "").Replace(".", "_");
+            return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                .Replace("global::", "")
+                .Replace("<", "Of_")
+                .Replace(">", "_End")
+                .Replace(".", "_");
         }
 
         public static string Join(this IEnumerable<string> values, string separator = ", ")

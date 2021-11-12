@@ -17,7 +17,7 @@ namespace DuckInterface.Test
             var project = TestProject.Project;
 
             var compilation = await project.GetCompilationAsync();
-            var errors = compilation.GetDiagnostics()
+            var errors = compilation!.GetDiagnostics()
                 .Where(o => o.Severity == DiagnosticSeverity.Error)
                 .ToArray();
 
@@ -73,26 +73,26 @@ namespace DuckInterface.Test
 
             var assembly = await project.CompileToRealAssembly();
             var method = assembly
-                .GetType("TestProject.Program")
+                .GetType("TestProject.Program")!
                 .GetMethod("Main");
 
-            method.Invoke(null, new string[] { null });
+            method!.Invoke(null, new object?[] { null });
         }
 
-        // [TestMethod]
+        [TestMethod]
         public async Task GenericsDuckWorks()
         {
             var project = await TestProject.Project.ReplacePartsOfDocumentAsync(
                 "Program.cs",
                 ("// namespaces", "using System.Collections;"),
-                ("// main", "Duck.From<IList<int>>()"));
+                ("// main", "Duck.From<IStream<int>>();"));
 
             var assembly = await project.CompileToRealAssembly();
             var method = assembly
-                .GetType("TestProject.Program")
+                .GetType("TestProject.Program")!
                 .GetMethod("Main");
 
-            method.Invoke(null, new string[] { null });
+            method!.Invoke(null, new object?[] { null });
         }
 
         [TestMethod]
@@ -114,10 +114,10 @@ namespace DuckInterface.Test
 
             var assembly = await project.CompileToRealAssembly();
             var method = assembly
-                .GetType("TestProject.Program")
+                .GetType("TestProject.Program")!
                 .GetMethod("GetStream");
 
-            var stream = method.Invoke(null, null);
+            var stream = method!.Invoke(null, null);
 
             Assert.IsNotNull(stream);
         }

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using DuckInterface;
 // namespaces
 
@@ -15,6 +16,11 @@ namespace TestProject
         byte[] ToArray();
     }
 
+    public interface IStream<TData>
+    {
+        TData Read();
+    }
+    
     public interface IStream
     {
         int ReadByte();
