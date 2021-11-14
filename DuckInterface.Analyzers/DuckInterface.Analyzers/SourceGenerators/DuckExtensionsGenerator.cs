@@ -91,7 +91,7 @@ namespace DuckInterface.Analyzers
 
                     if (!processed.Contains(duck.Interface))
                     {
-                        BaseClassGenerator.Generate(context, duck.Interface);
+                        BaseClassGeneratorv2.Generate(context, duck.Interface);
                         processed.Add(duck.Interface);
                     }
 

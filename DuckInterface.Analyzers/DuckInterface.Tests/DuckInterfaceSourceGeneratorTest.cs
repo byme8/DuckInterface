@@ -94,6 +94,22 @@ namespace DuckInterface.Test
 
             method!.Invoke(null, new object?[] { null });
         }
+        
+        [TestMethod]
+        public async Task DuckIndexersWorks()
+        {
+            var project = await TestProject.Project.ReplacePartsOfDocumentAsync(
+                "Program.cs",
+                ("// namespaces", "using System.Collections;"),
+                ("// main", "Duck.From<IList<int>>();"));
+
+            var assembly = await project.CompileToRealAssembly();
+            var method = assembly
+                .GetType("TestProject.Program")!
+                .GetMethod("Main");
+
+            method!.Invoke(null, new object?[] { null });
+        }
 
         [TestMethod]
         public async Task PartialDuckFromWorks()

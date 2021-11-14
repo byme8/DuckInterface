@@ -32,7 +32,7 @@ namespace TestProject
         bool CanRead { get; }
         bool CanWrite { get; }
     }
-
+    
     class Program
     {
         public static void Main(string[] args)
@@ -44,6 +44,11 @@ namespace TestProject
         {
             var stream = new MemoryStream();
             return stream.Duck<IStream>();
+        }
+
+        public static ICalculator GetCalculator()
+        {
+            return Duck.From<ICalculator>().CreatePartial();
         }
 
         // additional 1

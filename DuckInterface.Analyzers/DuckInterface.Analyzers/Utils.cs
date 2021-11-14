@@ -9,7 +9,7 @@ namespace DuckInterface
 {
     public static class Utils
     {
-        public const string EditorBrowsable = "[System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]";
+        public const string EditorBrowsable = "[global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]";
 
         public static string GetDuckImplementationClassName(ITypeSymbol duckInterface)
         {
@@ -29,17 +29,37 @@ namespace DuckInterface
             return stringBuilder.ToString();
         }
 
-        public static IEnumerable<ISymbol> GetAllMembers(this ITypeSymbol symbol)
+        public static IEnumerable<ISymbol> GetAllMembers(this ITypeSymbol symbol, HashSet<ITypeSymbol> processedInterfaces = null)
         {
+            processedInterfaces ??= new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
             if (symbol.BaseType != null)
             {
-                foreach (var member in symbol.BaseType.GetAllMembers())
+                foreach (var member in symbol.BaseType.GetAllMembers(processedInterfaces))
                 {
                     yield return member;
                 }
             }
 
             foreach (var member in symbol.GetMembers())
+            {
+                yield return member;
+            }
+
+            var typeSymbols = symbol.Interfaces
+                .Where(o => !processedInterfaces.Contains(o))
+                .OfType<ITypeSymbol>()
+                .ToArray();
+
+            foreach (var type in typeSymbols)
+            {
+                processedInterfaces.Add(type);
+            }
+
+            var members = typeSymbols
+                .SelectMany(o => o.GetAllMembers(processedInterfaces))
+                    .Distinct(SymbolEqualityComparer.Default);
+
+            foreach (var member in members)
             {
                 yield return member;
             }
