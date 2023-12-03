@@ -36,7 +36,7 @@ float ApplyCalculator(ICalculator calculator, float a, float b)
 }
 
 ```
-In this case, duck typing can be helpful because it will allow us to pass `` AddCalculator easily ``. The `` DuckInterface `` may help with it. 
+In this case, duck typing can be helpful because it will allow us to pass `` AddCalculator `` easily. The `` DuckInterface `` may help with it. 
 You will need to install the NuGet package and call the `` Duck<> `` extension method where we are passing the variable:
 
 ``` cs 
