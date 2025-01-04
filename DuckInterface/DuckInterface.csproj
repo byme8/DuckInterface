@@ -9,19 +9,22 @@
 
     <PropertyGroup>
         <PackageId>DuckInterface</PackageId>
-        <Version>0.2.1.2</Version>
+        <Version>0.3.0.0</Version>
         <Authors>byme</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/byme8/DuckInterface</PackageProjectUrl>
         <RepositoryUrl>https://github.com/byme8/DuckInterface</RepositoryUrl>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <Description>DuckInterface</Description>
         <PackageTags>DuckInterface, analyzers</PackageTags>
         <NoPackageAnalysis>true</NoPackageAnalysis>
-
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
     </PropertyGroup>
 
     <ItemGroup>
+        <None Include="./../README.md" Pack="true" PackagePath="/"/>
+        
         <ProjectReference Include="..\DuckInterface.Analyzers\DuckInterface.Analyzers\DuckInterface.Analyzers.csproj"/>
         <ProjectReference Include="..\DuckInterface.Core\DuckInterface.Core.csproj"/>
     </ItemGroup>
